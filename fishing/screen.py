@@ -5,9 +5,9 @@ import cv2
 import pyautogui
 
 SCREEN_X=260
-SCREEN_Y=744
+SCREEN_Y=721
 SCREEN_BX=670
-SCREEN_BY=980
+SCREEN_BY=955
 
 def click_either(*args):
     for arg in args:
@@ -23,10 +23,13 @@ def try_click(rgb_range):
     compute_and_click(target)
 
 
-def compute_click(target):
+waitings = 0
+def compute_and_click(target):
+    global waitings
     nonzero_indices = np.nonzero(target)
     if len(nonzero_indices[0]) < 100:
-        print("Could not find where to click")
+        print(f"Could not find where to click - {waitings=}", end='\r')
+        waitings += 1
         return False
 
     yis, xis = nonzero_indices
@@ -34,11 +37,14 @@ def compute_click(target):
     y = SCREEN_Y + np.mean(yis)
 
     # Do the click
+    if waitings != 0:
+        print()
+    print(f"We wanna clicky! at ({int(x)}, {int(y)})")
     for dx in [-20, 0, 20]:
         click_x = x + dx
         click_y = y
-        print(f"We wanna clicky! at ({click_x}, {click_y})")
         pyautogui.click(click_x, click_y)
+    waitings = 0
     return True
 
 
