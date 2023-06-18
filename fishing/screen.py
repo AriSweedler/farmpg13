@@ -44,15 +44,15 @@ def log(msg):
     # Time
     current_time = datetime.datetime.now()
     formatted_time = current_time.strftime("%H:%M:%S.%f")
-    print(f"[{formatted_time}]", end=" ")
+    print(f"[{formatted_time}]", end=" ", file=sys.stderr)
 
     # msg
     if log_is_repeat:
         counted_log_repeatings += 1
-        print(f"{counted_log_repeatings=} times: {msg}")
+        print(f"{counted_log_repeatings=} times: {msg}", file=sys.stderr)
     else:
         counted_log_repeatings = 0
-        print(msg)
+        print(msg, file=sys.stderr)
     if msg not in last_msg:
         last_msg = msg
 
@@ -103,7 +103,7 @@ def move(quadrant):
     # Find location of move
     global state
     if state == quadrant:
-        #print("Didn't move, staying put")
+        logging.debug("Didn't move, staying put")
         return
     state = quadrant
     screen = {
@@ -116,19 +116,15 @@ def move(quadrant):
 
     # Do the move
     pyautogui.click(*location)
+    wait_update_delay()
+    logging.warning("We moved")
 
 
-def explore(quadrant):
+def tl_click_explore():
     global stamina
-    screen = {
-        "top_left": [455, 350],
-        "top_right": [960, 217],
-        "bot_left": [477, 950],
-        "bot_right": [1270, 900],
-    }
-    location = screen[quadrant]
-    pyautogui.click(*location)
-    stamina -= 3
+    global EXPLORE_COST
+    pyautogui.click(500, 440)
+    stamina -= EXPLORE_COST
 
 
 def is_bob_present():
@@ -148,19 +144,61 @@ def is_bob_present():
     logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is")
     return True
 
+def is_stamina_left():
+    stamina_reading_color_range = [(0, 0, 240), (10, 40, 255)]
+    stamina_reading_screen_range = [515, 431, 538, 448]
+    s = stamina_reading_screen_range
 
-def handle_state():
-    handle_stamina()
-    if worms == 0:
-        buy_worms()
+    # Capture and mask the screen (based on colors) to define a target
+    screen = cv2.cvtColor(
+        np.array(ImageGrab.grab(bbox=(s[0], s[1], s[2], s[3]))), cv2.COLOR_RGBA2RGB
+    )
+    target = cv2.inRange(screen, *stamina_reading_color_range)
+    cv2.imshow("Masked Target", target)
+    if len(np.nonzero(target)[0]) < 100:
+        logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is not")
+        return False
+    logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is")
+    return True
 
-def handle_stamina():
-    if stamina > 3:
-        logging.warning(f"We have stamina and we must use it")
-        move("top_left")
-    while stamina >= 3:
-        explore("top_left")
-        logging.warning(f"Using all left: {stamina=}")
+
+import hashlib
+import requests
+EXPLORE_COST = 3
+last_digest = ""
+def request_explore_is_exhausted():
+    # Send the request
+    logging.warning("Trying to request an explore")
+    url = 'https://farmrpg.com/worker.php?go=explore&id=2'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://farmrpg.com/index.php',
+        'Origin': 'https://farmrpg.com',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Cookie': 'pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-GPC': '1',
+        'Content-Length': '0',
+        'TE': 'trailers',
+        'X-Requested-With': 'XMLHttpRequest'
+    }
+    response = requests.post(url, headers=headers)
+
+    # Parse if we're gassed outta the response
+    global last_digest
+    digest = hashlib.sha256(response.text.encode('utf-8')).hexdigest()
+    print(f"{digest=} and {last_digest=} for exploring")
+    if last_digest == digest:
+        return True
+    last_digest = digest
+    print(f"updated {last_digest=} for exploring")
+    return False
 
 
 def buy_worms():
@@ -193,8 +231,7 @@ def br_click_to_say_ok():
     pyautogui.click(1250, 924)
     wait_update_delay()
 
-
-def click_fish():
+def bl_click_fish():
     fish_color_range = [(30, 40, 50), (50, 60, 70)]
     fish_screen_range = [260, 721, 670, 955]
     caught = try_click(fish_color_range, fish_screen_range)
@@ -270,7 +307,7 @@ def wait_bob():
     return True
 
 @timeout(5)
-def click_bob():
+def bl_click_bob():
     bob_color_range = [(0, 0, 240), (10, 40, 255)]
     bob_screen_range = [262, 829, 580, 927]
 
@@ -285,7 +322,10 @@ def click_bob():
     global worms
     stamina += 5
     worms -= 1
+    if worms == 0:
+        buy_worms()
     logging.warning(f"Caught a fish. {stamina=}")
+    wait_update_delay()
 
 
 def set_up_log_handler():
@@ -300,15 +340,12 @@ def set_up_log_handler():
     # Add the handler to the root logger
     logging.getLogger().addHandler(handler)
 
-INITIAL_WORMS = 400
+INITIAL_WORMS = 5
 worms = INITIAL_WORMS
 if __name__ == "__main__":
     set_up_log_handler()
-    logging.debug("DEBUG")
-    logging.info("INFO")
-    logging.warning("WARN")
     bob_screen_range = [262, 829, 580, 927]
     while True:
-        ensure(click_fish)
-        click_bob()
-        handle_state()
+        ensure(bl_click_fish)
+        bl_click_bob()
+        ensure(request_explore_is_exhausted)
