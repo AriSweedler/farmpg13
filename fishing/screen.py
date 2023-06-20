@@ -5,11 +5,10 @@ import cv2
 import pyautogui
 import datetime
 import logging
+import sys
 
 
 def overwrite_last_log():
-    import sys
-
     # Move the cursor up one
     sys.stdout.write("\033[1F")
 
@@ -49,7 +48,7 @@ def log(msg):
     # msg
     if log_is_repeat:
         counted_log_repeatings += 1
-        print(f"{counted_log_repeatings=} times: {msg}", file=sys.stderr)
+        print(f"{msg} - repeated {counted_log_repeatings} times", file=sys.stderr)
     else:
         counted_log_repeatings = 0
         print(msg, file=sys.stderr)
@@ -95,7 +94,6 @@ def compute_and_click(target, screen_bounds):
     return True
 
 
-stamina = 0
 state = "bot_left"
 
 
@@ -117,14 +115,12 @@ def move(quadrant):
     # Do the move
     pyautogui.click(*location)
     wait_update_delay()
-    logging.warning("We moved")
+    log("We moved")
 
 
 def tl_click_explore():
-    global stamina
     global EXPLORE_COST
     pyautogui.click(500, 440)
-    stamina -= EXPLORE_COST
 
 
 def is_bob_present():
@@ -144,32 +140,14 @@ def is_bob_present():
     logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is")
     return True
 
-def is_stamina_left():
-    stamina_reading_color_range = [(0, 0, 240), (10, 40, 255)]
-    stamina_reading_screen_range = [515, 431, 538, 448]
-    s = stamina_reading_screen_range
-
-    # Capture and mask the screen (based on colors) to define a target
-    screen = cv2.cvtColor(
-        np.array(ImageGrab.grab(bbox=(s[0], s[1], s[2], s[3]))), cv2.COLOR_RGBA2RGB
-    )
-    target = cv2.inRange(screen, *stamina_reading_color_range)
-    cv2.imshow("Masked Target", target)
-    if len(np.nonzero(target)[0]) < 100:
-        logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is not")
-        return False
-    logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is")
-    return True
-
 
 import hashlib
 import requests
-EXPLORE_COST = 3
+EXPLORE_COST = 1
 last_digest = ""
 def request_explore_is_exhausted():
     # Send the request
-    logging.warning("Trying to request an explore")
-    url = 'https://farmrpg.com/worker.php?go=explore&id=2'
+    url = 'https://farmrpg.com/worker.php?go=explore&id=7'
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0',
         'Accept': '*/*',
@@ -193,11 +171,10 @@ def request_explore_is_exhausted():
     # Parse if we're gassed outta the response
     global last_digest
     digest = hashlib.sha256(response.text.encode('utf-8')).hexdigest()
-    print(f"{digest=} and {last_digest=} for exploring")
     if last_digest == digest:
         return True
     last_digest = digest
-    print(f"updated {last_digest=} for exploring")
+    log(f"Explored")
     return False
 
 
@@ -214,6 +191,7 @@ def buy_worms():
 
     global worms
     worms += INITIAL_WORMS
+    exit(1)
     
 def wait_update_delay():
     UPDATE_DELAY = 0.8
@@ -236,9 +214,9 @@ def bl_click_fish():
     fish_screen_range = [260, 721, 670, 955]
     caught = try_click(fish_color_range, fish_screen_range)
     if caught:
-        logging.warning("Trying to catch fish. Success")
+        log("Reeled in a fish")
     else:
-        logging.warning("Trying to catch fish. No fish")
+        log("Trying to hook a fish. No fish")
     return caught
 
 
@@ -287,7 +265,7 @@ def timeout(seconds):
                 logging.debug("Function did not time out, trying to run it")
                 result = func(*args, **kwargs)
             except TimeoutError:
-                logging.warning("Function timed out")
+                log("Function timed out")
                 result = None
 
             signal.alarm(0)
@@ -303,7 +281,7 @@ def wait_bob():
     bob_color_range = [(0, 0, 240), (10, 40, 255)]
     bob_screen_range = [262, 829, 580, 927]
     while not is_bob_present():
-        logging.warning("Waiting for bob")
+        log("Waiting for bob")
     return True
 
 @timeout(5)
@@ -314,17 +292,15 @@ def bl_click_bob():
     # Check if the bob is there. Should we even move?
     bob_is_present = wait_bob()
     while bob_is_present:
-        logging.warning("Trying to catch a fish by hitting the bob")
+        log("Trying to reel a fish by hitting the bob")
         try_click(bob_color_range, bob_screen_range)
         bob_is_present = is_bob_present()
+    log("The bob is no longer present")
 
-    global stamina
     global worms
-    stamina += 5
     worms -= 1
     if worms == 0:
         buy_worms()
-    logging.warning(f"Caught a fish. {stamina=}")
     wait_update_delay()
 
 
@@ -340,12 +316,15 @@ def set_up_log_handler():
     # Add the handler to the root logger
     logging.getLogger().addHandler(handler)
 
-INITIAL_WORMS = 5
+def fish_one():
+    ensure(bl_click_fish)
+    bl_click_bob()
+
+INITIAL_WORMS = 400
 worms = INITIAL_WORMS
 if __name__ == "__main__":
     set_up_log_handler()
     bob_screen_range = [262, 829, 580, 927]
     while True:
-        ensure(bl_click_fish)
-        bl_click_bob()
-        ensure(request_explore_is_exhausted)
+        for _ in range(5): fish_one()
+        #ensure(request_explore_is_exhausted)
