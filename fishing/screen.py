@@ -118,11 +118,6 @@ def move(quadrant):
     log("We moved")
 
 
-def tl_click_explore():
-    global EXPLORE_COST
-    pyautogui.click(500, 440)
-
-
 def is_bob_present():
     bob_color_range = [(0, 0, 240), (10, 40, 255)]
     bob_screen_range = [262, 829, 580, 927]
@@ -141,13 +136,63 @@ def is_bob_present():
     return True
 
 
+################################################################################
+import json
+from pyfzf import FzfPrompt
+from functools import lru_cache
+
+@lru_cache
+def item_to_loc_map():
+    with open("scrape_explore/items.json") as file:
+        item_to_location = json.load(file)
+    return item_to_location
+
+
+@lru_cache
+def loc_to_num_map():
+    with open("scrape_explore/location_to_number.json") as file:
+        location_to_number = json.load(file)
+    return location_to_number
+
+
+@lru_cache
+def pick_item() -> str:
+    fzf = FzfPrompt()
+    fzf.single_key = True
+    ans = fzf.prompt(list(item_to_loc_map().keys()))[0]
+    log(ans)
+    return ans
+
+
+def item_to_num(item: str) -> int:
+    desired_loc = item_to_loc_map()[item]
+    ans = loc_to_num_map()[desired_loc]
+    return ans
+################################################################################
+
 import hashlib
 import requests
+import os
+
+# Get the value of the environment variable
+EXPLORED_ITEM = os.environ.get('EXPLORED_ITEM')
 EXPLORE_COST = 1
 last_digest = ""
 def request_explore_is_exhausted():
+    global EXPLORED_ITEM
+    explore_loc_num = 1
+    if EXPLORED_ITEM is None or EXPLORED_ITEM == "choose":
+        EXPLORED_ITEM = pick_item()
+    if EXPLORED_ITEM == "no":
+        return True
+    # Validate 'EXPLORED_ITEM'
+    explore_loc_num = item_to_num(EXPLORED_ITEM)
+    if explore_loc_num == -1:
+        log("You cannot get this item yet. Try something else")
+        sys.exit(1)
+
     # Send the request
-    url = 'https://farmrpg.com/worker.php?go=explore&id=7'
+    url = f'https://farmrpg.com/worker.php?go=explore&id={explore_loc_num}'
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0',
         'Accept': '*/*',
@@ -174,9 +219,8 @@ def request_explore_is_exhausted():
     if last_digest == digest:
         return True
     last_digest = digest
-    log(f"Explored")
+    log(f"Explored hoping for {EXPLORED_ITEM}/{explore_loc_num}")
     return False
-
 
 def buy_worms():
     logging.debug("I WILL MOVE TO BOT RIGHT")
@@ -326,5 +370,5 @@ if __name__ == "__main__":
     set_up_log_handler()
     bob_screen_range = [262, 829, 580, 927]
     while True:
-        for _ in range(5): fish_one()
-        #ensure(request_explore_is_exhausted)
+        ensure(request_explore_is_exhausted)
+        for _ in range(1): fish_one()
