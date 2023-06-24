@@ -1,0 +1,93 @@
+#!/bin/bash
+
+function item::name_to_num() {
+  case "$1" in
+    worm) echo 18 ;;
+    *) echo "Unknown item '$1'"; exit 1 ;;
+  esac
+}
+
+cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
+function buy() {
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    echo "Failed to get item ID"
+    exit 1
+  fi
+  local -r quantity="${2:?How many to buy}"
+
+  # Do it
+  curl --silent --output /dev/null -X POST "https://farmrpg.com/worker.php?go=buyitem&id=${item_id}&qty=${quantity}" \
+     -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0" \
+     -H "Accept: */*" \
+     -H "Accept-Language: en-US,en;q=0.5" \
+     -H "Accept-Encoding: gzip, deflate, br" \
+     -H "Referer: https://farmrpg.com/" \
+     -H "X-Requested-With: XMLHttpRequest" \
+     -H "Origin: https://farmrpg.com" \
+     -H "DNT: 1" \
+     -H "Connection: keep-alive" \
+     -H "$cookie_header" \
+     -H "Sec-Fetch-Dest: empty" \
+     -H "Sec-Fetch-Mode: cors" \
+     -H "Sec-Fetch-Site: same-origin" \
+     -H "Sec-GPC: 1" \
+     -H "Content-Length: 0" \
+     -H "TE: trailers"
+  if (( $? != 0 )); then
+    echo "Failed to buy"
+    exit 1
+  fi
+
+  echo "Bought successfully | item='$1/$item_id' quantity='$quantity'"
+}
+
+function explore() {
+  local -r explore_loc_num="${1:?where to explore}"
+
+  curl --silent --output /dev/null -X POST "https://farmrpg.com/worker.php?go=explore&id=${explore_loc_num}" \
+       -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0" \
+       -H "Accept: */*" \
+       -H "Accept-Language: en-US,en;q=0.5" \
+       -H "Accept-Encoding: gzip, deflate, br" \
+       -H "Referer: https://farmrpg.com/index.php" \
+       -H "Origin: https://farmrpg.com" \
+       -H "DNT: 1" \
+       -H "Connection: keep-alive" \
+       -H "$cookie_header" \
+       -H "Sec-Fetch-Dest: empty" \
+       -H "Sec-Fetch-Mode: no-cors" \
+       -H "Sec-Fetch-Site: same-origin" \
+       -H "Sec-GPC: 1" \
+       -H "Content-Length: 0" \
+       -H "TE: trailers" \
+       -H "X-Requested-With: XMLHttpRequest"
+  if (( $? != 0 )); then
+    echo "Failed to explore"
+    exit 1
+  fi
+
+  echo "Explored successfully | location='$explore_loc_num'"
+}
+
+function rapid_tap_delay() {
+  printf "%.3f\n" $(echo "scale=3; ($((RANDOM % 20))+$((RANDOM % 20))+20) / 1000" | bc)
+}
+
+function rapid_explore() {
+  while True; do
+    ( ./bin/cli explore 4 & ) &>/dev/null
+    sleep "$(rapid_tap_delay)"
+  done
+}
+
+function main() {
+  # Dispatch to the acceptable functions
+  while (( $# > 0 )); do
+    case "$1" in
+      buy|explore|rapid_explore) "$1" "${@:2}"; return ;;
+      *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
+    esac
+  done
+}
+main "$@"

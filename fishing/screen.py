@@ -1,332 +1,45 @@
-import time
-import numpy as np
-from PIL import ImageGrab
-import cv2
-import pyautogui
 import datetime
 import logging
 import sys
+import time
 
+import cv2
+import numpy as np
 
-def overwrite_last_log():
-    # Move the cursor up one
-    sys.stdout.write("\033[1F")
-
-###     # [1K clears the line from the beginning of the line up to the current cursor position. It erases any characters from the start of the line to the current cursor position.
-    # [2K clears the entire line. It moves the cursor to the beginning of the line and erases any characters on that line.
-    sys.stdout.write("\033[2K")
-    sys.stdout.flush()
-###     # Move the cursor up one and then to the start of the line
-###     print("\033[F\r", end="")
-
-
-last_msg = ""
-counted_log_repeatings = 0
-
-
-def log(msg):
-    global counted_log_repeatings
-    global last_msg
-
-    # Syntactic sugar
-    def is_log_a_repeat(msg, last_msg):
-        return msg == last_msg
-    # End syntactic sugar
-
-    # Determine if we are on THIS line or PREV line
-    log_is_repeat = is_log_a_repeat(msg, last_msg)
-
-    # start message
-    if log_is_repeat:
-        overwrite_last_log()
-
-    # Time
-    current_time = datetime.datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S.%f")
-    print(f"[{formatted_time}]", end=" ", file=sys.stderr)
-
-    # msg
-    if log_is_repeat:
-        counted_log_repeatings += 1
-        print(f"{msg} - repeated {counted_log_repeatings} times", file=sys.stderr)
-    else:
-        counted_log_repeatings = 0
-        print(msg, file=sys.stderr)
-    if msg not in last_msg:
-        last_msg = msg
-
-def try_click(rgb_range, s):
-    # Capture and mask the screen (based on colors) to define a target
-    screen = cv2.cvtColor(
-        np.array(ImageGrab.grab(bbox=(s[0], s[1], s[2], s[3]))), cv2.COLOR_RGBA2RGB
-    )
-    target = cv2.inRange(screen, *rgb_range)
-
-    # Compute where to click, then launch the click
-    return compute_and_click(target, s)
-
-
-waitings = 0
-
-
-def compute_and_click(target, screen_bounds):
-    global waitings
-    nonzero_indices = np.nonzero(target)
-    if len(nonzero_indices[0]) < 100:
-        logging.debug(f"Could not find where to click - {waitings=}", end='\r')
-        waitings += 1
-        return False
-
-    yis, xis = nonzero_indices
-    x = screen_bounds[0] + np.mean(xis)
-    y = screen_bounds[1] + np.mean(yis)
-
-    # Do the click
-    if waitings != 0:
-        logging.debug("Waiting on the click")
-    logging.debug(f"We wanna clicky! at ({int(x)}, {int(y)})")
-    for i in [1, -1, 0]:
-        dx = 30 * (i)
-        click_x = x + dx
-        click_y = y
-        pyautogui.click(click_x, click_y)
-    waitings = 0
-    return True
-
-
-state = "bot_left"
-
-
-def move(quadrant):
-    # Find location of move
-    global state
-    if state == quadrant:
-        logging.debug("Didn't move, staying put")
-        return
-    state = quadrant
-    screen = {
-        "top_left": [455, 350],
-        "top_right": [1300, 350],
-        "bot_left": [455, 950],
-        "bot_right": [1300, 950],
-    }
-    location = screen[quadrant]
-
-    # Do the move
-    pyautogui.click(*location)
-    wait_update_delay()
-    log("We moved")
+sys.path.append("../lib")
+from lib.ensure import ensure
+from lib.log import log
+from lib.screen import get_screen, try_click_target
+from lib.timeout import timeout
 
 
 def is_bob_present():
     bob_color_range = [(0, 0, 240), (10, 40, 255)]
     bob_screen_range = [262, 829, 580, 927]
     s = bob_screen_range
-    logging.debug("BEGIN_MESSAGE 0001: Checking if bob is present")
+    logging.debug("Checking if bob is present")
 
     # Capture and mask the screen (based on colors) to define a target
-    screen = cv2.cvtColor(
-        np.array(ImageGrab.grab(bbox=(s[0], s[1], s[2], s[3]))), cv2.COLOR_RGBA2RGB
-    )
-    target = cv2.inRange(screen, *bob_color_range)
+    target = cv2.inRange(get_screen(bob_screen_range), *bob_color_range)
     if len(np.nonzero(target)[0]) < 100:
-        logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is not")
+        logging.debug("Checking if bob is present. It is not")
         return False
-    logging.debug("CONTINUE_MESSAGE 0001: Checking if bob is present. It is")
+    logging.debug("Checking if bob is present. It is")
     return True
 
-
-################################################################################
-import json
-from pyfzf import FzfPrompt
-from functools import lru_cache
-
-@lru_cache
-def item_to_loc_map():
-    with open("scrape_explore/items.json") as file:
-        item_to_location = json.load(file)
-    return item_to_location
-
-
-@lru_cache
-def loc_to_num_map():
-    with open("scrape_explore/location_to_number.json") as file:
-        location_to_number = json.load(file)
-    return location_to_number
-
-
-@lru_cache
-def pick_item() -> str:
-    fzf = FzfPrompt()
-    fzf.single_key = True
-    ans = fzf.prompt(list(item_to_loc_map().keys()))[0]
-    log(ans)
-    return ans
-
-
-def item_to_num(item: str) -> int:
-    desired_loc = item_to_loc_map()[item]
-    ans = loc_to_num_map()[desired_loc]
-    return ans
-################################################################################
-
-import hashlib
-import requests
-import os
-
-# Get the value of the environment variable
-EXPLORED_ITEM = os.environ.get('EXPLORED_ITEM')
-EXPLORE_COST = 1
-last_digest = ""
-def request_explore_is_exhausted():
-    global EXPLORED_ITEM
-    explore_loc_num = 1
-    if EXPLORED_ITEM is None or EXPLORED_ITEM == "choose":
-        EXPLORED_ITEM = pick_item()
-    if EXPLORED_ITEM == "no":
-        return True
-    # Validate 'EXPLORED_ITEM'
-    explore_loc_num = item_to_num(EXPLORED_ITEM)
-    if explore_loc_num == -1:
-        log("You cannot get this item yet. Try something else")
-        sys.exit(1)
-
-    # Send the request
-    url = f'https://farmrpg.com/worker.php?go=explore&id={explore_loc_num}'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Referer': 'https://farmrpg.com/index.php',
-        'Origin': 'https://farmrpg.com',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Cookie': 'pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'no-cors',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-GPC': '1',
-        'Content-Length': '0',
-        'TE': 'trailers',
-        'X-Requested-With': 'XMLHttpRequest'
-    }
-    response = requests.post(url, headers=headers)
-
-    # Parse if we're gassed outta the response
-    global last_digest
-    digest = hashlib.sha256(response.text.encode('utf-8')).hexdigest()
-    if last_digest == digest:
-        return True
-    last_digest = digest
-    log(f"Explored hoping for {EXPLORED_ITEM}/{explore_loc_num}")
-    return False
-
-def buy_worms():
-    logging.debug("I WILL MOVE TO BOT RIGHT")
-    move('bot_right')
-    logging.debug("I WILL BUY WORMS")
-    br_click_to_say_ok()
-    logging.debug("OK")
-    br_click_to_buy_worms()
-    logging.debug("WORMS BOUGHT")
-    br_click_to_confirm_buying_worms()
-    logging.debug("WORMS CONFIRMED")
-
-    global worms
-    worms += INITIAL_WORMS
-    exit(1)
-    
-def wait_update_delay():
-    UPDATE_DELAY = 0.8
-    time.sleep(UPDATE_DELAY)
-
-def br_click_to_buy_worms():
-    pyautogui.click(1456, 824)
-    wait_update_delay()
-
-def br_click_to_confirm_buying_worms():
-    pyautogui.click(1260, 966)
-    wait_update_delay()
-
-def br_click_to_say_ok():
-    pyautogui.click(1250, 924)
-    wait_update_delay()
-
-def bl_click_fish():
+def hook_fish():
+    log("Trying to hook a fish")
     fish_color_range = [(30, 40, 50), (50, 60, 70)]
-    fish_screen_range = [260, 721, 670, 955]
-    caught = try_click(fish_color_range, fish_screen_range)
-    if caught:
-        log("Reeled in a fish")
-    else:
-        log("Trying to hook a fish. No fish")
-    return caught
+    fish_screen_range = [260, 670, 670, 900]
+    return try_click_target(fish_color_range, fish_screen_range)
 
-
-def ensure(fxn):
-    success = False
-    while not success:
-        success = fxn()
-
-
-################################################################################
-class ScopeGuard:
-    def __init__(self, callback):
-        self.callback = callback
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.callback()
-
-
-def curry(func, *args):
-    result = func(*args)
-
-
-################################################################################
-
-################################################################################
-import signal
-import functools
-
-class TimeoutError(Exception):
-    pass
-
-def timeout(seconds):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            def timeout_handler(signum, frame):
-                raise TimeoutError(f"Function timed out: {seconds=}")
-
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(seconds)
-
-            try:
-                logging.debug("Function did not time out, trying to run it")
-                result = func(*args, **kwargs)
-            except TimeoutError:
-                log("Function timed out")
-                result = None
-
-            signal.alarm(0)
-            return result
-
-        return wrapper
-
-    return decorator
-################################################################################
 
 @timeout(1)
 def wait_bob():
-    bob_color_range = [(0, 0, 240), (10, 40, 255)]
-    bob_screen_range = [262, 829, 580, 927]
-    while not is_bob_present():
-        log("Waiting for bob")
-    return True
+    while True:
+        if is_bob_present():
+            return True
+
 
 @timeout(5)
 def bl_click_bob():
@@ -334,41 +47,27 @@ def bl_click_bob():
     bob_screen_range = [262, 829, 580, 927]
 
     # Check if the bob is there. Should we even move?
-    bob_is_present = wait_bob()
+    bob_is_present = True
     while bob_is_present:
         log("Trying to reel a fish by hitting the bob")
-        try_click(bob_color_range, bob_screen_range)
+        try_click_target(bob_color_range, bob_screen_range)
         bob_is_present = is_bob_present()
     log("The bob is no longer present")
 
-    global worms
-    worms -= 1
-    if worms == 0:
-        buy_worms()
-    wait_update_delay()
 
-
-def set_up_log_handler():
-    # Create a logging handler (console handler in this example)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('[%(levelname)s] %(message)s')
-    handler.setFormatter(formatter)
-
-    # Set the desired log level (INFO in this example)
-    handler.setLevel(logging.INFO)
-
-    # Add the handler to the root logger
-    logging.getLogger().addHandler(handler)
-
-def fish_one():
-    ensure(bl_click_fish)
+def catch_fish():
+    while True:
+        if not hook_fish():
+            continue
+        if not wait_bob():
+            continue
+        break
     bl_click_bob()
 
-INITIAL_WORMS = 400
-worms = INITIAL_WORMS
-if __name__ == "__main__":
-    set_up_log_handler()
-    bob_screen_range = [262, 829, 580, 927]
-    while True:
-        ensure(request_explore_is_exhausted)
-        for _ in range(1): fish_one()
+
+### from lib.screen import visualize_target
+### def see_fish():
+###     log("Trying to see a fish")
+###     fish_color_range = [(30, 40, 50), (50, 60, 70)]
+###     fish_screen_range = [260, 670, 670, 900]
+###     return visualize_target(fish_color_range, fish_screen_range)

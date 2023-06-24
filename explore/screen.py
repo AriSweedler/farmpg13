@@ -1,5 +1,11 @@
-import pyautogui
 import time
+
+import pyautogui
+
+
+def tl_click_explore():
+    global EXPLORE_COST
+    pyautogui.click(500, 440)
 
 screen = {
     'top_left': [455, 350],
