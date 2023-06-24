@@ -3,71 +3,56 @@
 function item::name_to_num() {
   case "$1" in
     worm) echo 18 ;;
+    pepper) echo 11 ;;
+    pepper_seeds) echo 12 ;;
+    eggplant) echo 13 ;;
+    eggplant_seeds) echo 14 ;;
     *) echo "Unknown item '$1'"; exit 1 ;;
   esac
 }
 
 cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
-function buy() {
+user_agent_header="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"
+
+function worker() {
+  local base url
+  base="https://farmrpg.com/worker.php"
+  url="$base"
+
   # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
-    echo "Failed to get item ID"
-    exit 1
-  fi
-  local -r quantity="${2:?How many to buy}"
+  local arg arg_sep="?"
+  while (( $# > 0 )); do
+    arg="$1"
+    shift 1
+    url="${url}${arg_sep}${arg}"
+    arg_sep="&"
+  done
 
-  # Do it
-  curl --silent --output /dev/null -X POST "https://farmrpg.com/worker.php?go=buyitem&id=${item_id}&qty=${quantity}" \
-     -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0" \
-     -H "Accept: */*" \
-     -H "Accept-Language: en-US,en;q=0.5" \
-     -H "Accept-Encoding: gzip, deflate, br" \
-     -H "Referer: https://farmrpg.com/" \
-     -H "X-Requested-With: XMLHttpRequest" \
-     -H "Origin: https://farmrpg.com" \
-     -H "DNT: 1" \
-     -H "Connection: keep-alive" \
-     -H "$cookie_header" \
-     -H "Sec-Fetch-Dest: empty" \
-     -H "Sec-Fetch-Mode: cors" \
-     -H "Sec-Fetch-Site: same-origin" \
-     -H "Sec-GPC: 1" \
-     -H "Content-Length: 0" \
-     -H "TE: trailers"
+  curl \
+    -X POST "$url" \
+    --silent \
+    --output /dev/null \
+    -H "$user_agent_header" \
+    -H "Accept: */*" \
+    -H "Accept-Language: en-US,en;q=0.5" \
+    -H "Accept-Encoding: gzip, deflate, br" \
+    -H "Referer: https://farmrpg.com/" \
+    -H "X-Requested-With: XMLHttpRequest" \
+    -H "Origin: https://farmrpg.com" \
+    -H "DNT: 1" \
+    -H "Connection: keep-alive" \
+    -H "$cookie_header" \
+    -H "Sec-Fetch-Dest: empty" \
+    -H "Sec-Fetch-Mode: cors" \
+    -H "Sec-Fetch-Site: same-origin" \
+    -H "Sec-GPC: 1" \
+    -H "Content-Length: 0" \
+    -H "TE: trailers"
+
   if (( $? != 0 )); then
-    echo "Failed to buy"
+    echo "Failed to invoke worker | url='$url' "
     exit 1
   fi
-
-  echo "Bought successfully | item='$1/$item_id' quantity='$quantity'"
-}
-
-function explore() {
-  local -r explore_loc_num="${1:?where to explore}"
-
-  curl --silent --output /dev/null -X POST "https://farmrpg.com/worker.php?go=explore&id=${explore_loc_num}" \
-       -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0" \
-       -H "Accept: */*" \
-       -H "Accept-Language: en-US,en;q=0.5" \
-       -H "Accept-Encoding: gzip, deflate, br" \
-       -H "Referer: https://farmrpg.com/index.php" \
-       -H "Origin: https://farmrpg.com" \
-       -H "DNT: 1" \
-       -H "Connection: keep-alive" \
-       -H "$cookie_header" \
-       -H "Sec-Fetch-Dest: empty" \
-       -H "Sec-Fetch-Mode: no-cors" \
-       -H "Sec-Fetch-Site: same-origin" \
-       -H "Sec-GPC: 1" \
-       -H "Content-Length: 0" \
-       -H "TE: trailers" \
-       -H "X-Requested-With: XMLHttpRequest"
-  if (( $? != 0 )); then
-    echo "Failed to explore"
-    exit 1
-  fi
-
-  echo "Explored successfully | location='$explore_loc_num'"
 }
 
 function rapid_tap_delay() {
@@ -81,11 +66,140 @@ function rapid_explore() {
   done
 }
 
+function endpoint() {
+  local -r url="${1:?}"
+
+  curl \
+    -X POST "$url" \
+    --output output.txt \
+    -H "$user_agent_header" \
+    -H "Accept: */*" \
+    -H "Accept-Language: en-US,en;q=0.5" \
+    -H "Accept-Encoding: gzip, deflate, br" \
+    -H "Referer: https://farmrpg.com/" \
+    -H "X-Requested-With: XMLHttpRequest" \
+    -H "Origin: https://farmrpg.com" \
+    -H "DNT: 1" \
+    -H "Connection: keep-alive" \
+    -H "$cookie_header" \
+    -H "Sec-Fetch-Dest: empty" \
+    -H "Sec-Fetch-Mode: cors" \
+    -H "Sec-Fetch-Site: same-origin" \
+    -H "Sec-GPC: 1" \
+    -H "Content-Length: 0" \
+    -H "TE: trailers"
+
+  if (( $? != 0 )); then
+    echo "Failed to hit endpoint | url='$url' "
+    exit 1
+  fi
+}
+
+################################################################################
+
+function sell() {
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    echo "Failed to get item ID"
+    exit 1
+  fi
+  local -r quantity="${2:?How many to selly}"
+
+  worker "go=sellitem" "id=${item_id}" "qty=${quantity}"
+  if (( $? != 0 )); then
+    echo "Failed to sell"
+    exit 1
+  fi
+
+  echo "Sold successfully | item='$1/$item_id' quantity='$quantity'"
+}
+
+function buy() {
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    echo "Failed to get item ID"
+    exit 1
+  fi
+  local -r quantity="${2:?How many to buy}"
+
+  worker "go=buyitem" "id=${item_id}" "qty=${quantity}"
+  if (( $? != 0 )); then
+    echo "Failed to buy"
+    exit 1
+  fi
+
+  echo "Bought successfully | item='$1/$item_id' quantity='$quantity'"
+}
+
+function explore() {
+  local -r explore_loc_num="${1:?where to explore}"
+
+  worker "go=explore" "id=${explore_loc_num}"
+  if (( $? != 0 )); then
+    echo "Failed to explore"
+    exit 1
+  fi
+
+  echo "Explored successfully | location='$explore_loc_num'"
+}
+
+function harvest() {
+  worker "go=harvestall" "id=280551"
+  if (( $? != 0 )); then
+    echo "Failed to harvest all"
+    exit 1
+  fi
+
+  echo "Harvested all successfully"
+}
+
+function plant() {
+  # worker "go=setfarmseedcounts" "cachebuster=$RANDOM" "id=$(item::name_to_num "eggplant_seeds")"
+  worker "go=plantall" "id=280551"
+  if (( $? != 0 )); then
+    echo "Failed to plant all"
+    exit 1
+  fi
+
+  echo "Planted all successfully"
+}
+
+function breakfast_boost::eat() {
+  worker "go=usemultitem" "id=661" "amt=1"
+  echo "Ate a breakfast boost"
+}
+
+function breakfast_boosted() {
+  local plots=24
+  (
+  breakfast_boost::eat
+  local grown=0
+  while true; do
+    plant
+    sleep 0.01
+    harvest
+    sleep 0.02
+    grown=$(( grown + plots ))
+    if (( grown > 400 )); then
+      sell eggplant $grown
+      buy eggplant_seeds $grown
+      grown=0
+    fi
+  done) &
+  trap "kill -9 $!" RETURN
+  sleep 115
+}
+
 function main() {
   # Dispatch to the acceptable functions
   while (( $# > 0 )); do
     case "$1" in
-      buy|explore|rapid_explore) "$1" "${@:2}"; return ;;
+      buy|sell \
+      |explore \
+      |plant|harvest \
+      |endpoint \
+      |rapid_explore|breakfast_boosted \
+      ) "$1" "${@:2}"; return ;;
       *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
     esac
   done

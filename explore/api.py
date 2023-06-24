@@ -44,7 +44,7 @@ def api_explore_loc(explore_loc_num: int):
     return requests.post(url, headers=headers)
 
 
-last_digest = ""
+digest_history = [None] * 3
 def item_to_loc(item: Item) -> Location:
     explore_loc_num = item_to_num(item)
     return explore_loc_num
@@ -63,10 +63,12 @@ def explore_and_check_exhausted():
     response = api_explore_loc(loc_num)
 
     # Parse if we're gassed outta the response
-    global last_digest
+    global digest_history
     digest = hashlib.sha256(response.text.encode("utf-8")).hexdigest()
-    if last_digest == digest:
+    if all(element == digest_history[0] and element != None for element in digest_history):
+        digest_history = [None] * 3
         return True  # We are exhausted
-    last_digest = digest
+    digest_history.pop(0)     # Remove the first element
+    digest_history.append(digest)  # Append the new item to the end
     log(f"Explored hoping for {item}/{loc_num}")
     return False  # We are not exhausted yet

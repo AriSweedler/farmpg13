@@ -7,4 +7,4 @@ if __name__ == "__main__":
     set_up_log_handler()
     while True:
         ensure(explore_and_check_exhausted)
-        for _ in range(1): catch_fish()
+        for _ in range(10): catch_fish()
