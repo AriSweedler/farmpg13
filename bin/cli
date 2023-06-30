@@ -1,67 +1,97 @@
 #!/bin/bash
 
-function item::name_to_num() {
+################################################################################
+function color() {
   case "$1" in
-    worm) echo 18 ;;
-    pepper) echo 11 ;;
-    pepper_seeds) echo 12 ;;
-    eggplant) echo 13 ;;
-    eggplant_seeds) echo 14 ;;
-    *) echo "Unknown item '$1'"; exit 1 ;;
+    any) echo '\e\[\d\dm' ;;
+    clear) echo '\e[0m' ;;
+    err) echo '\e[31m' ;;
+    info) echo '\e[32m' ;;
+    warn) echo '\e[33m' ;;
+    debug) echo '\e[34m' ;;
+    *) echo "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; exit 1 ;;
   esac
 }
 
-cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
-user_agent_header="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"
+function ansi_tee() {
+  function remove_ansii() {
+    awk '{ gsub(/\033\[[0-9;]*m/, ""); print $0 }'
+  }
+  cat - >&2
+  cat - | remove_ansii >> "$LOGFILE"
+}
 
-function worker() {
-  local base url
-  base="https://farmrpg.com/worker.php"
-  url="$base"
-
+LOGFILE="farmpg.log"
+rm -f "$LOGFILE"
+function log_err() { log_impl --level "err" -- "$@" | ansi_tee ; }
+function log_info() { log_impl --level "info" -- "$@" | ansi_tee ; }
+function log_warn() { log_impl --level "warn" -- "$@" | ansi_tee ; }
+function log_debug() { log_impl --level "debug" -- "$@" | ansi_tee ; }
+# shellcheck disable=SC2059
+function log_impl() {
   # Parse args
-  local arg arg_sep="?"
-  while (( $# > 0 )); do
-    arg="$1"
-    shift 1
-    url="${url}${arg_sep}${arg}"
-    arg_sep="&"
-  done
+  local level
+  # TODO put this macro into my snippet library
+  # $while_args_left_do_case_in
+  # $while_args_left_done
+  while (( $# > 0 )); do case "$1" in
+    --level) level="$2"; shift 2 || exit 40 ;;
+    --) shift 1 && break ;;
+    *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'" >&2; exit 1 ;;
+  esac ; done
 
-  curl \
-    -X POST "$url" \
-    --silent \
-    --output /dev/null \
-    -H "$user_agent_header" \
-    -H "Accept: */*" \
-    -H "Accept-Language: en-US,en;q=0.5" \
-    -H "Accept-Encoding: gzip, deflate, br" \
-    -H "Referer: https://farmrpg.com/" \
-    -H "X-Requested-With: XMLHttpRequest" \
-    -H "Origin: https://farmrpg.com" \
-    -H "DNT: 1" \
-    -H "Connection: keep-alive" \
-    -H "$cookie_header" \
-    -H "Sec-Fetch-Dest: empty" \
-    -H "Sec-Fetch-Mode: cors" \
-    -H "Sec-Fetch-Site: same-origin" \
-    -H "Sec-GPC: 1" \
-    -H "Content-Length: 0" \
-    -H "TE: trailers"
+  # Print
+  printf "$(color "$level")"
+  printf "[farmpg13] "
+  printf "[$(date -u +"%Y-%m-%d_%H:%M:%S.%N")] "
+  printf "[TODO_function] "
+  printf "$*"
+  printf "$(color "clear")\n"
+}
+# shellcheck disable=SC2059
+function log_field() {
+  local -r field="${1:?}"
+  function hay_non_ascii() {
+    [ -z "$*" ] && return 2
+    if [[ "$*" == *[![:ascii:]]* ]]; then
+      return 1
+    else
+      return 0
+    fi
+  }
+  hay_non_ascii "$field"
+  case $? in
+  0) printf "$field" ;;
+  1)
+    printf "NOT_ASCII"
+    set -x
+    [ "$field" == "DEBUG IN TRACE" ] && true
+    set +x
+    ;;
+  2) printf "NULL" ;;
+  esac
+}
+################################################################################
 
-  if (( $? != 0 )); then
-    echo "Failed to invoke worker | url='$url' "
+function item::name_to_num() {
+  local -r item_name="${1:?}"
+  local -r num="$(jq -r '.["'"$item_name"'"]' "./scrape_explore/item_to_number.json")"
+  if [ "$num" == "null" ]; then
+    log_err "Could not turn item into number | num='$num'"
+    printf "0"
     exit 1
   fi
+  # shellcheck disable=SC2059
+  printf "$num"
 }
 
 function rapid_tap_delay() {
-  printf "%.3f\n" $(echo "scale=3; ($((RANDOM % 20))+$((RANDOM % 20))+20) / 1000" | bc)
+  printf "%.3f\n" "$(echo "scale=3; ($((RANDOM % 20))+$((RANDOM % 20))+20) / 1000" | bc)"
 }
 
 function rapid_explore() {
   while True; do
-    ( ./bin/cli explore 4 & ) &>/dev/null
+    ( ./bin/cli explore 5 & ) &>/dev/null
     sleep "$(rapid_tap_delay)"
   done
 }
@@ -70,8 +100,8 @@ function endpoint() {
   local -r url="${1:?}"
 
   curl \
+    --silent \
     -X POST "$url" \
-    --output output.txt \
     -H "$user_agent_header" \
     -H "Accept: */*" \
     -H "Accept-Language: en-US,en;q=0.5" \
@@ -87,120 +117,375 @@ function endpoint() {
     -H "Sec-Fetch-Site: same-origin" \
     -H "Sec-GPC: 1" \
     -H "Content-Length: 0" \
-    -H "TE: trailers"
-
-  if (( $? != 0 )); then
-    echo "Failed to hit endpoint | url='$url' "
-    exit 1
+    -H "TE: trailers" \
+  | brotli -d
+  local -r rc="$?"rc
+  if (( rc != 0 )); then
+    log_err "Failed to hit endpoint | url='$url' "
+    #exit 1
   fi
 }
 
 ################################################################################
 
-function sell() {
+function donate() {
   # Parse args
   if ! item_id="$(item::name_to_num "$1")"; then
-    echo "Failed to get item ID"
+    log_err "Failed to get item ID"
     exit 1
   fi
-  local -r quantity="${2:?How many to selly}"
+  local -r amount="${2:?How many to donate}"
 
-  worker "go=sellitem" "id=${item_id}" "qty=${quantity}"
-  if (( $? != 0 )); then
-    echo "Failed to sell"
+  # Do work
+  local output
+  if ! output="$(worker "go=donatecomm" "amt=${amount}")"; then
+    log_err "Failed to invoke worker"
     exit 1
   fi
 
-  echo "Sold successfully | item='$1/$item_id' quantity='$quantity'"
+  # Parse output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+  # Validate output
+  if [ "$noutput" == "success" ]; then
+    log_info "Donated to community center successfully | item='$1/$item_id' amount='$amount'"
+  elif [ "$noutput" == "notenough" ]; then
+    log_err "You do not have enough items to donate | noutput='$noutput'"
+    exit 1
+  else
+    log_warn "Unknown output to donate | output='$output'"
+    exit 1
+  fi
 }
 
 function buy() {
   # Parse args
   if ! item_id="$(item::name_to_num "$1")"; then
-    echo "Failed to get item ID"
+    log_err "Failed to get item ID"
     exit 1
   fi
   local -r quantity="${2:?How many to buy}"
 
-  worker "go=buyitem" "id=${item_id}" "qty=${quantity}"
-  if (( $? != 0 )); then
-    echo "Failed to buy"
+  local -r output="$(worker "go=buyitem" "id=${item_id}" "qty=${quantity}")"
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+
+  # Validate output
+  if [ "$noutput" == "success" ]; then
+    log_info "Bought successfully | item='$1/$item_id' quantity='$quantity' noutput='$noutput'"
+  elif [ "$noutput" == "error" ]; then
+    log_err "Failed to buy | noutput='$noutput'"
+    exit 1
+  elif (( noutput < quantity )) && (( noutput > 0 )); then
+    local -r max_amount="$noutput"
+    log_debug "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
+    buy "$1" "$max_amount"
+  else
+    log_warn "Unknown output to buy | output='$output'"
     exit 1
   fi
-
-  echo "Bought successfully | item='$1/$item_id' quantity='$quantity'"
 }
 
 function explore() {
   local -r explore_loc_num="${1:?where to explore}"
 
-  worker "go=explore" "id=${explore_loc_num}"
-  if (( $? != 0 )); then
-    echo "Failed to explore"
-    exit 1
+  output="$(worker "go=explore" "id=${explore_loc_num}")"
+  if [ "$output" != "success" ]; then
+    log_err "Failed to explore"
+    #exit 1
   fi
 
-  echo "Explored successfully | location='$explore_loc_num'"
+  log_info "Explored successfully | location='$explore_loc_num'"
 }
 
-function harvest() {
-  worker "go=harvestall" "id=280551"
-  if (( $? != 0 )); then
-    echo "Failed to harvest all"
-    exit 1
-  fi
-
-  echo "Harvested all successfully"
-}
-
-function plant() {
-  # worker "go=setfarmseedcounts" "cachebuster=$RANDOM" "id=$(item::name_to_num "eggplant_seeds")"
-  worker "go=plantall" "id=280551"
-  if (( $? != 0 )); then
-    echo "Failed to plant all"
-    exit 1
-  fi
-
-  echo "Planted all successfully"
-}
 
 function breakfast_boost::eat() {
-  worker "go=usemultitem" "id=661" "amt=1"
-  echo "Ate a breakfast boost"
+  output="$(worker "go=usemultitem" "id=661" "amt=1")"
+  log_info "Ate a breakfast boost | output='$output'"
 }
 
 function breakfast_boosted() {
-  local plots=24
+  local plots=28
   (
+  harvest
   breakfast_boost::eat
+  local -r PLANT="cucumber"
   local grown=0
   while true; do
-    plant
+    plant "$PLANT" || buy "${PLANT}_seeds" 999
     sleep 0.01
     harvest
     sleep 0.02
     grown=$(( grown + plots ))
+    log_info "BB helped us grow the plant | grown='$grown' plant='$PLANT'"
     if (( grown > 400 )); then
-      sell eggplant $grown
-      buy eggplant_seeds $grown
+      donate "$PLANT" "$grown"
+      # sell "$PLANT" "$grown"
+      buy "${PLANT}_seeds" "$grown"
       grown=0
     fi
   done) &
-  trap "kill -9 $!" RETURN
-  sleep 115
+  # shellcheck disable=SC2064
+  trap "kill -9 $! &>/dev/null" RETURN EXIT
+  sleep 120
 }
 
+################################################################################
+function craft() {
+  local -r item="${1:?}"
+  local -r item_nr="$(item::name_to_num "$item")"
+  if [ "$item_nr" == "null" ] || [ -z "$item_nr" ]; then
+    log_err "ERROR with getting item"
+    exit 1
+  fi
+  output="$(worker "go=craftitem" "id=$item_nr" "amt=10")"
+  log_info "Crafted item $item/$item_nr | output='$output'"
+}
+
+function item_to_nr() {
+  endpoint "https://farmrpg.com/item.php?id=${1:?item nr}" \
+  | sed -n 's/.*((\(.*\))).*/\1/p'
+}
+
+function testing() {
+  local -r item="${1:?}"
+  log_info "Item='$item' nr='$(item::name_to_num "$item")'"
+}
+
+################################################################################
+cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
+user_agent_header="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"
+
+function worker() {
+
+  # Parse args
+  function build_url_query_params() {
+    local ans="" arg arg_sep="?"
+    # TODO put this macro into my snippet library # $for_arg_in_args
+    # $for_arg_in_args
+    # $done_args_in_args
+    while (( $# > 0 )); do
+      arg="$1"; shift 1
+      ans="${ans}${arg_sep}${arg}"
+      arg_sep="&"
+    done
+
+    # TODO put this macro into my snippet library # $return_stdout
+    echo "$ans"
+  }
+  local -r base="https://farmrpg.com/worker.php"
+  local -r url="${base}$(build_url_query_params "$@")"
+  shift $#
+
+  log_debug "About to send req to farmrpg | url='$url'"
+  local -r output="$(\
+    local -r tmp_file="$(mktemp)"
+    # shellcheck disable=SC2064
+    trap "rm -f $tmp_file" EXIT
+    curl \
+      -X POST "$url" \
+      --silent \
+      --output "$tmp_file" \
+      -H "$user_agent_header" \
+      -H "Accept: */*" \
+      -H "Accept-Language: en-US,en;q=0.5" \
+      -H "Accept-Encoding: gzip, deflate, br" \
+      -H "Referer: https://farmrpg.com/" \
+      -H "X-Requested-With: XMLHttpRequest" \
+      -H "Origin: https://farmrpg.com" \
+      -H "DNT: 1" \
+      -H "Connection: keep-alive" \
+      -H "$cookie_header" \
+      -H "Sec-Fetch-Dest: empty" \
+      -H "Sec-Fetch-Mode: cors" \
+      -H "Sec-Fetch-Site: same-origin" \
+      -H "Sec-GPC: 1" \
+      -H "Content-Length: 0" \
+      -H "TE: trailers"
+    local -r rc=$?
+    cat "$tmp_file"
+    return $rc
+  )"
+  local rc="$?"
+  if (( rc != 0 )); then
+    log_err "Failed to send curl req | url='$url'"
+    exit 1
+  fi
+  log_debug "Sent req | output='$(log_field "$output")'"
+
+  # Log extra if the output is not null
+  [ -z "$output" ] && {
+  local -r decoded_output="$(brotli -d <<< "$output")"
+  local rc="$?"
+  if (( rc != 0 )); then
+    log_err "Failed to brotli decode | output='$output'"
+    exit 1
+  fi
+  log_debug "Sent req | decoded_output='$decoded_output'"
+  }
+
+  if (( rc != 0 )); then
+    log_err "Failed to brotli decode the output | url='$url' "
+    #exit 1
+  fi
+  echo "$output"
+}
+
+function harvest() {
+  local output
+  if ! output="$(worker "go=harvestall" "id=280551")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Deal with output
+  if [ "$output" == $'\003\003\200success\003' ]; then
+    log_info "Harvested all successfully"
+  elif [ "$output" == "" ]; then
+    log_err "Failed to harvest all | output='$output'"
+    exit 1
+  else
+    log_warn "Unknown output to harvest | output='$output'"
+  fi
+}
+
+function set_farmseed() {
+  local item item_nr
+  item="${1:?}"
+  if ! item_nr="$(item::name_to_num "${item}_seeds")"; then
+    log_err "Failed to convert item name to num | item='$item'"
+    exit 1
+  fi
+
+  # Deal with output
+  if ! output="$(worker "go=setfarmseedcounts" "id=$item_nr")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+  log_debug "We tried to set farm seed counts | output='$output'"
+  if [ "$output" == $'3' ]; then
+    # TODO promote this to INFO instead of DEBUG if this is the invoking action
+    log_debug "Set farm seed successfully"
+  elif [ "$output" == "" ]; then
+    log_err "Failed to set farm seed"
+    exit 1
+  else
+    log_warn "Unknown output to setting farm seed | output='$output'"
+  fi
+}
+
+function plant() {
+  local -r item="${1:?}"
+
+  # Set up state
+  if ! set_farmseed "$item"; then
+    log_err "Failed to set farm seed | item='$item'"
+    exit 1
+  fi
+
+  # Do work
+  local output item_response grow_time
+  log_debug "About to send plantall req"
+  if ! output="$(worker "go=plantall" "id=280551")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse response
+  IFS="|" read -r item_response grow_time <<< "$output"
+  # TODO make a 'strip WEIRD char' method and THEN a 'normalize' method
+  function normalize() {
+    (( $# == 0 )) && return
+    [ "$1" == $'\203\004\200Peppers' ] && echo "pepper" && return
+    [ "$1" == $'\003\005\200Cucumbers' ] && echo "cucumber" && return
+    [ "$1" == $'\003\006\200Cucumbers' ] && echo "cucumber" && return
+    [ "$1" == $'\003\004\200Peppers' ] && echo "pepper" && return
+    [ "$1" == $'\003\001\200s' ] && echo "no_seeds" && return
+    [ "$1" == $'\003\200' ] && echo "unknown" && return
+    [ "$1" == $'3' ] && echo "ya_hay_plants" && return
+    set -x
+    [ "$*" == "DEBUG IN TRACE" ] && true
+    set +x
+    log_err "Unable to normalize | func='${FUNCNAME[0]}' arg='$1'"
+    exit 1
+  }
+  if ! nitem="$(normalize "$item_response")" ; then
+    log_err "Failed to normalize item in response | output='$output' item_response='$item_response'"
+    exit 1
+  fi
+
+  # Validate response
+  case "$nitem" in
+  "$item")
+    log_info "Planted all successfully | plant='$nitem' grow_time='$grow_time'"
+    ;;
+  ya_hay_plants)
+    log_err "There are already plants growing in your farm - we cannot plant more | output='$output'"
+    exit 1
+    ;;
+  no_seeds)
+    log_err "You do not have any seeds | output='$output' plant='$item'"
+    return 1
+    ;;
+  none)
+    log_err "Failed to plant all - we planted none | item='$item' nitem='$nitem' output='$output'"
+    exit 1
+    ;;
+  *)
+    log_warn "Unknown response | output='$output' nitem='$nitem'"
+    set -x
+    [ "$*" == "DEBUG IN TRACE" ] && true
+    set +x
+    ;;
+  esac
+}
+
+function sell() {
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    log_err "Failed to get item ID"
+    exit 1
+  fi
+  local -r quantity="${2:?How many to sell}"
+
+  # Do work
+  local output
+  if ! output="$(worker "go=sellitem" "id=${item_id}" "qty=${quantity}")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse output
+  local -r gold_earned="${output//[$'\001\002\003\004\200\203']}"
+
+  # Validate output
+  if (( gold_earned > 0 )); then
+    log_info "Sold successfully | item='$1/$item_id' quantity='$quantity' gold_earned='$gold_earned'"
+  elif [ "$gold_earned" == "0" ]; then
+    log_err "Sold for 0 ? | output='$output' gold_earned='$gold_earned'"
+    exit 1
+  elif [ "$gold_earned" == "error" ]; then
+    log_err "Failed to sell | output='$output'"
+    exit 1
+  else
+    log_warn "Unknown output to sell | output='$output'"
+    exit 1
+  fi
+}
+
+################################################################################
 function main() {
   # Dispatch to the acceptable functions
   while (( $# > 0 )); do
     case "$1" in
-      buy|sell \
+      buy|sell|donate \
+      |craft\
       |explore \
       |plant|harvest \
       |endpoint \
       |rapid_explore|breakfast_boosted \
+      |item_to_nr \
+      |testing \
       ) "$1" "${@:2}"; return ;;
-      *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
+      *) log_err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; exit 1 ;;
     esac
   done
 }

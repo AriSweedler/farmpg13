@@ -29,7 +29,7 @@ def is_bob_present():
 
 def hook_fish():
     log("Trying to hook a fish")
-    fish_color_range = [(30, 40, 50), (50, 60, 70)]
+    fish_color_range = [(10, 30, 40), (255, 255, 100)]
     fish_screen_range = [260, 670, 670, 900]
     return try_click_target(fish_color_range, fish_screen_range)
 
@@ -65,9 +65,9 @@ def catch_fish():
     bl_click_bob()
 
 
-### from lib.screen import visualize_target
-### def see_fish():
-###     log("Trying to see a fish")
-###     fish_color_range = [(30, 40, 50), (50, 60, 70)]
-###     fish_screen_range = [260, 670, 670, 900]
-###     return visualize_target(fish_color_range, fish_screen_range)
+from lib.screen import visualize_target
+def see_fish():
+    log("Trying to see a fish")
+    fish_color_range = [(10, 30, 40), (255, 255, 100)]
+    fish_screen_range = [260, 670, 670, 900]
+    return visualize_target(fish_color_range, fish_screen_range)

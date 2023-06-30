@@ -15,6 +15,4 @@ screen = {
 }
 while True:
     location = screen['top_left']
-    time.sleep(3)
-    pyautogui.click(*location)
     pyautogui.click(*location)
