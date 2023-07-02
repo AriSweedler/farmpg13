@@ -12,6 +12,10 @@ from lib.log import log
 from lib.screen import get_screen, try_click_target
 from lib.timeout import timeout
 
+#FISH_COLOR_RANGE = [(10, 30, 40), (255, 255, 100)] # Everything else
+#FISH_COLOR_RANGE = [(40, 20, 0), (80, 30, 30)] # Lake Minerva
+FISH_COLOR_RANGE = [(30, 44, 50), (40, 54, 60)] # Crystal River
+FISH_SCREEN_RANGE = [260, 670, 670, 900]
 
 def is_bob_present():
     bob_color_range = [(0, 0, 240), (10, 40, 255)]
@@ -29,9 +33,9 @@ def is_bob_present():
 
 def hook_fish():
     log("Trying to hook a fish")
-    fish_color_range = [(10, 30, 40), (255, 255, 100)]
-    fish_screen_range = [260, 670, 670, 900]
-    return try_click_target(fish_color_range, fish_screen_range)
+    global FISH_COLOR_RANGE
+    global FISH_SCREEN_RANGE
+    return try_click_target(FISH_COLOR_RANGE, FISH_SCREEN_RANGE)
 
 
 @timeout(1)
@@ -68,6 +72,6 @@ def catch_fish():
 from lib.screen import visualize_target
 def see_fish():
     log("Trying to see a fish")
-    fish_color_range = [(10, 30, 40), (255, 255, 100)]
-    fish_screen_range = [260, 670, 670, 900]
-    return visualize_target(fish_color_range, fish_screen_range)
+    global FISH_COLOR_RANGE
+    global FISH_SCREEN_RANGE
+    return visualize_target(FISH_COLOR_RANGE, FISH_SCREEN_RANGE)

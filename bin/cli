@@ -1,5 +1,7 @@
 #!/bin/bash
 
+MY_FARM_PLOTS=28
+
 ################################################################################
 function color() {
   case "$1" in
@@ -64,9 +66,9 @@ function log_field() {
   0) printf "$field" ;;
   1)
     printf "NOT_ASCII"
-    set -x
-    [ "$field" == "DEBUG IN TRACE" ] && true
-    set +x
+    # set -x
+    # [ "$field" == "DEBUG IN TRACE" ] && true
+    # set +x
     ;;
   2) printf "NULL" ;;
   esac
@@ -74,7 +76,7 @@ function log_field() {
 ################################################################################
 
 function item::name_to_num() {
-  local -r item_name="${1:?}"
+  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
   local -r num="$(jq -r '.["'"$item_name"'"]' "./scrape_explore/item_to_number.json")"
   if [ "$num" == "null" ]; then
     log_err "Could not turn item into number | num='$num'"
@@ -87,6 +89,13 @@ function item::name_to_num() {
 
 function rapid_tap_delay() {
   printf "%.3f\n" "$(echo "scale=3; ($((RANDOM % 20))+$((RANDOM % 20))+20) / 1000" | bc)"
+}
+
+function camp_mailbox() {
+  while True; do
+    collect_mail
+    sleep $(bc <<< "$(rapid_tap_delay) * 20 + $(rapid_tap_delay)")
+  done
 }
 
 function rapid_explore() {
@@ -126,9 +135,7 @@ function endpoint() {
   fi
 }
 
-################################################################################
-
-function donate() {
+function _donate() {
   # Parse args
   if ! item_id="$(item::name_to_num "$1")"; then
     log_err "Failed to get item ID"
@@ -196,18 +203,17 @@ function explore() {
   log_info "Explored successfully | location='$explore_loc_num'"
 }
 
-
-function breakfast_boost::eat() {
+function eat::breakfast_boost() {
   output="$(worker "go=usemultitem" "id=661" "amt=1")"
   log_info "Ate a breakfast boost | output='$output'"
 }
 
 function breakfast_boosted() {
-  local plots=28
+  local plots=$MY_FARM_PLOTS
   (
   harvest
-  breakfast_boost::eat
-  local -r PLANT="cucumber"
+  eat::breakfast_boost
+  local -r PLANT="carrot"
   local grown=0
   while true; do
     plant "$PLANT" || buy "${PLANT}_seeds" 999
@@ -217,37 +223,60 @@ function breakfast_boosted() {
     grown=$(( grown + plots ))
     log_info "BB helped us grow the plant | grown='$grown' plant='$PLANT'"
     if (( grown > 400 )); then
-      donate "$PLANT" "$grown"
-      # sell "$PLANT" "$grown"
+      # _donate "$PLANT" "$grown"
+      sell "$PLANT" "$grown"
       buy "${PLANT}_seeds" "$grown"
       grown=0
     fi
   done) &
   # shellcheck disable=SC2064
   trap "kill -9 $! &>/dev/null" RETURN EXIT
-  sleep 120
+  sleep 118
 }
 
 ################################################################################
 function craft() {
-  local -r item="${1:?}"
-  local -r item_nr="$(item::name_to_num "$item")"
-  if [ "$item_nr" == "null" ] || [ -z "$item_nr" ]; then
-    log_err "ERROR with getting item"
+  # Parse args
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    log_err "Failed to get item ID"
     exit 1
   fi
-  output="$(worker "go=craftitem" "id=$item_nr" "amt=10")"
-  log_info "Crafted item $item/$item_nr | output='$output'"
+  local quantity="${2:?How many to craft}"
+  quantity=$((quantity * 4 / 5))
+  if (( quantity == 0 )); then
+    log_err "wtf lol"
+    exit 1
+  fi
+  log_debug "Crafting 80% of desired output because of perks | quantity='$2' adjusted='$quantity'"
+
+  # Do work
+  local output
+
+  if ! output="$(worker "go=craftitem" "id=${item_id}" "qty=${quantity}")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Validate output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+  if [ "$noutput" == "success" ]; then
+    log_info "Successfully crafted | item='$1/$item_id' quantity='$quantity'"
+  elif [ "$noutput" == "cannotafford" ]; then
+    log_err "Missing a resource necessary to craft this"
+    exit 1
+  else
+    log_warn "Unknown output to craft | output='$output' noutput='$noutput'"
+    set -x
+    [ "$output" == "DEBUG IN TRACE" ] && true
+    set +x
+    exit 1
+  fi
 }
 
 function item_to_nr() {
   endpoint "https://farmrpg.com/item.php?id=${1:?item nr}" \
   | sed -n 's/.*((\(.*\))).*/\1/p'
-}
-
-function testing() {
-  local -r item="${1:?}"
-  log_info "Item='$item' nr='$(item::name_to_num "$item")'"
 }
 
 ################################################################################
@@ -394,13 +423,22 @@ function plant() {
   # TODO make a 'strip WEIRD char' method and THEN a 'normalize' method
   function normalize() {
     (( $# == 0 )) && return
-    [ "$1" == $'\203\004\200Peppers' ] && echo "pepper" && return
-    [ "$1" == $'\003\005\200Cucumbers' ] && echo "cucumber" && return
-    [ "$1" == $'\003\006\200Cucumbers' ] && echo "cucumber" && return
-    [ "$1" == $'\003\004\200Peppers' ] && echo "pepper" && return
+    local -r noutput="${1//[$'\001\002\003\004\200\203']}"
+    if [[ "${noutput: -1}" == "s" ]] && (( ${#noutput} > 1 )); then
+      local length ans
+      length=${#noutput}
+      ans="$(echo "${noutput:0:length-1}" | tr 'A-Z' 'a-z')"
+      case "$ans" in
+        hop) echo "hops" ;;
+        potatoe) echo "potato" ;;
+        *) echo "$ans" ;;
+      esac
+      return
+    fi
+
     [ "$1" == $'\003\001\200s' ] && echo "no_seeds" && return
-    [ "$1" == $'\003\200' ] && echo "unknown" && return
-    [ "$1" == $'3' ] && echo "ya_hay_plants" && return
+    [ "$1" == $'\003\200' ] && echo "ya_hay_plants" && return
+    [ "$1" == $'3' ] && echo "unknown3" && return
     set -x
     [ "$*" == "DEBUG IN TRACE" ] && true
     set +x
@@ -416,6 +454,8 @@ function plant() {
   case "$nitem" in
   "$item")
     log_info "Planted all successfully | plant='$nitem' grow_time='$grow_time'"
+    local -r ngrow_time="${grow_time//[$'\001\002\003\004\200\203']}"
+    GROW_TIME=$(( ngrow_time + 1 ))
     ;;
   ya_hay_plants)
     log_err "There are already plants growing in your farm - we cannot plant more | output='$output'"
@@ -430,9 +470,9 @@ function plant() {
     exit 1
     ;;
   *)
-    log_warn "Unknown response | output='$output' nitem='$nitem'"
+    log_warn "Unknown response to plant req | output='$output' nitem='$nitem' item='$item'"
     set -x
-    [ "$*" == "DEBUG IN TRACE" ] && true
+    [ "$item_response" == "DEBUG IN TRACE" ] && true
     set +x
     ;;
   esac
@@ -471,17 +511,57 @@ function sell() {
   fi
 }
 
+function collect_mail() {
+  # Do work
+  local output
+  if ! output="$(worker "go=collectallmailitems")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+  # Validate output
+  if [ "$noutput" == "success" ]; then
+    log_info "Successfully collected items"
+  else
+    log_warn "Unknown output to 'collectallmailitems' | noutput='$noutput'"
+    exit 1
+  fi
+}
+
+function planty() {
+  local -r plant="${1:?}"
+  local item_nr seed_nr
+
+  if ! buy "${plant}_seeds" $MY_FARM_PLOTS; then
+    log_err "Failed to buy seeds for plant | plant='$plant'"
+    exit 1
+  fi
+  if ! plant "$plant"; then
+    log_err "Failed to plant | plant='$plant'"
+    exit 1
+  fi
+  (
+    sleep $GROW_TIME
+    log_debug "We are done sleeping"
+    harvest
+    planty "$plant"
+  ) &
+  log_info "Sleeping until the plant is grown | GROW_TIME='$GROW_TIME' harvester_pid='$!'"
+}
+
 ################################################################################
 function main() {
   # Dispatch to the acceptable functions
   while (( $# > 0 )); do
     case "$1" in
-      buy|sell|donate \
-      |craft\
+      buy|sell|_donate \
+      |craft|collect_mail \
       |explore \
-      |plant|harvest \
+      |planty|plant|harvest \
       |endpoint \
-      |rapid_explore|breakfast_boosted \
+      |camp_mailbox|rapid_explore|breakfast_boosted \
       |item_to_nr \
       |testing \
       ) "$1" "${@:2}"; return ;;
