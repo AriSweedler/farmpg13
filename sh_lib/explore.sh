@@ -1,5 +1,32 @@
+# item
+# location
+# location number
 function explore::one() {
-  local -r explore_loc_num="${1:?where to explore::one}"
+  # Parse args
+  set -e
+  while (( $# > 0 )); do
+    local explore_loc_num
+    case "$1" in
+      --item)
+        local loc item
+        item="${2:?}"
+        loc="$(item::name_to_location "$item")"
+        explore_loc_num="$(item::location_to_num "$loc")"
+        shift 2
+        log::info "Dereferenced item into explore location | item='$item' loc='$loc'"
+        ;;
+      --loc)
+        explore_loc_num="$(item::location_to_num "$2")"
+        shift 2
+        ;;
+      [0-9][0-9])
+        explore_loc_num="$1"
+        shift 1
+        ;;
+      *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
+    esac
+  done
+  set +e
 
   if ! output="$(worker "go=explore" "id=${explore_loc_num}")"; then
     log::err "Failed to invoke worker"

@@ -1,10 +1,12 @@
-import json
+# Pipe the HTML page for your inventory through this script and get a JSON
+# object containing all that information.
+#
+# This is done with the sh cli with the 'inventory' function
 from bs4 import BeautifulSoup
+import json
+import sys
 
-html_content = ""
-with open('scrape_explore/data/inventory.html', 'r') as file:
-    html_content = file.read()
-
+html_content = sys.stdin.read()
 soup = BeautifulSoup(html_content, 'html.parser')
 
 link_elements = soup.select('a.item-link')
@@ -14,10 +16,7 @@ for link_element in link_elements:
     id_value = href.split('=')[1]
 
     item_after_element = link_element.select_one('div.item-after')
-    value = str(item_after_element.get_text())
-    print("ID:", id_value)
-    print("Value:", value)
-    print()
+    value = int(item_after_element.get_text())
     answers[id_value] = value
 
 # Convert the dictionary to JSON string

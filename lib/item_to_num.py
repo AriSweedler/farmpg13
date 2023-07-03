@@ -17,7 +17,7 @@ LocationNum = NewType("LocationNum", int)
 
 @lru_cache
 def item_to_item_num() -> Dict[Item, ItemNum]:
-    with open("scrape_explore/item_to_number.json") as file:
+    with open("scraped/item_to_number.json") as file:
         item_to_location = json.load(file)
         logging.debug(item_to_location)
     return item_to_location
@@ -25,7 +25,7 @@ def item_to_item_num() -> Dict[Item, ItemNum]:
 
 @lru_cache
 def item_to_loc_map() -> Dict[Item, Location]:
-    with open("scrape_explore/item_to_location.json") as file:
+    with open("scraped/item_to_location.json") as file:
         item_to_location = json.load(file)
         logging.debug(item_to_location)
     return item_to_location
@@ -33,7 +33,7 @@ def item_to_loc_map() -> Dict[Item, Location]:
 
 @lru_cache
 def loc_to_num_map() -> Dict[Location, LocationNum]:
-    with open("scrape_explore/location_to_number.json") as file:
+    with open("scraped/location_to_number.json") as file:
         location_to_number = json.load(file)
     return location_to_number
 

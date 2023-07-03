@@ -1,4 +1,5 @@
-function log::color() {
+# shellcheck disable=SC2028
+function log::_color() {
   case "$1" in
     clear) echo '\e[0m' ;;
     err) echo '\e[31m' ;;
@@ -10,18 +11,14 @@ function log::color() {
 }
 
 LOGFILE="farmpg.log"
-function ansi_tee() {
-  function remove_ansii() {
-    awk '{ gsub(/\033\[[0-9;]*m/, ""); print $0 }'
-  }
-  cat - >&2
-  cat - | remove_ansii >> "$LOGFILE"
+function _remove_ansii() {
+  awk '{ gsub(/\033\[[0-9;]*m/, ""); print $0 }'
 }
 
-function log::err() { log::_impl --level "err" -- "$@" | ansi_tee ; }
-function log::info() { log::_impl --level "info" -- "$@" | ansi_tee ; }
-function log::warn() { log::_impl --level "warn" -- "$@" | ansi_tee ; }
-function log::debug() { log::_impl --level "debug" -- "$@" | ansi_tee ; }
+function log::err() { log::_impl --level "err" -- "$@" ; }
+function log::info() { log::_impl --level "info" -- "$@" ; }
+function log::warn() { log::_impl --level "warn" -- "$@" ; }
+function log::debug() { log::_impl --level "debug" -- "$@" ; }
 
 # shellcheck disable=SC2059
 function log::_impl() {
@@ -36,13 +33,38 @@ function log::_impl() {
     *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'" >&2; exit 1 ;;
   esac ; done
 
-  # Print
-  printf "$(log::color "$level")"
-  printf "[farmpg13] "
-  printf "[$(date -u +"%Y-%m-%d_%H:%M:%S.%N")] "
-  printf "[TODO_function] "
-  printf "%s" "$*"
-  printf "$(log::color "clear")\n"
+  # Create the log
+  local log_msg
+  log_msg="$(
+    printf "$(log::_color "$level")"
+    printf "[$level] "
+    printf "[farmpg13] "
+    printf "[$(date -u +"%Y-%m-%d_%H:%M:%S.%N")] "
+    printf "[$(log::_caller)] "
+    printf "%s" "$*"
+    printf "$(log::_color "clear")\n"
+  )"
+
+  # Handle the log
+  echo "$log_msg" | _remove_ansii >> "$LOGFILE"
+  if [ "$level" != "debug" ]; then
+    echo "$log_msg" >&2
+  fi
+}
+
+function log::_caller() {
+  local stackdepth=0
+  while log::_unstackable "${FUNCNAME[$stackdepth]}"; do
+    ((stackdepth++))
+  done
+  echo "${FUNCNAME[$stackdepth]}"
+}
+
+function log::_unstackable() {
+  grep -q "log::" <<< "$1" && return 0
+  grep -q "::_" <<< "$1" && return 0
+  grep -q "^_" <<< "$1" && return 0
+  return 1
 }
 
 # shellcheck disable=SC2059

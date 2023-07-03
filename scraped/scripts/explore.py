@@ -50,5 +50,5 @@ if __name__ == "__main__":
 ### )
 ###
 ### for loc in $locations; do
-###   python3 scrape_explore/main.py https://buddy.farm/$loc
+###   python3 scraped/scripts/explore.py https://buddy.farm/$loc
 ### done
