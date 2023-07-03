@@ -105,65 +105,6 @@ function rapid_explore() {
   done
 }
 
-function endpoint() {
-  local -r url="${1:?}"
-
-  curl \
-    --silent \
-    -X POST "$url" \
-    -H "$user_agent_header" \
-    -H "Accept: */*" \
-    -H "Accept-Language: en-US,en;q=0.5" \
-    -H "Accept-Encoding: gzip, deflate, br" \
-    -H "Referer: https://farmrpg.com/" \
-    -H "X-Requested-With: XMLHttpRequest" \
-    -H "Origin: https://farmrpg.com" \
-    -H "DNT: 1" \
-    -H "Connection: keep-alive" \
-    -H "$cookie_header" \
-    -H "Sec-Fetch-Dest: empty" \
-    -H "Sec-Fetch-Mode: cors" \
-    -H "Sec-Fetch-Site: same-origin" \
-    -H "Sec-GPC: 1" \
-    -H "Content-Length: 0" \
-    -H "TE: trailers" \
-  | brotli -d
-  local -r rc="$?"rc
-  if (( rc != 0 )); then
-    log_err "Failed to hit endpoint | url='$url' "
-    #exit 1
-  fi
-}
-
-function _donate() {
-  # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
-    log_err "Failed to get item ID"
-    exit 1
-  fi
-  local -r amount="${2:?How many to donate}"
-
-  # Do work
-  local output
-  if ! output="$(worker "go=donatecomm" "amt=${amount}")"; then
-    log_err "Failed to invoke worker"
-    exit 1
-  fi
-
-  # Parse output
-  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
-  # Validate output
-  if [ "$noutput" == "success" ]; then
-    log_info "Donated to community center successfully | item='$1/$item_id' amount='$amount'"
-  elif [ "$noutput" == "notenough" ]; then
-    log_err "You do not have enough items to donate | noutput='$noutput'"
-    exit 1
-  else
-    log_warn "Unknown output to donate | output='$output'"
-    exit 1
-  fi
-}
-
 function buy() {
   # Parse args
   if ! item_id="$(item::name_to_num "$1")"; then
@@ -199,8 +140,10 @@ function explore() {
     log_err "Failed to explore"
     #exit 1
   fi
+  echo "$output" > output.txt
+  exit 0
 
-  log_info "Explored successfully | location='$explore_loc_num'"
+  log_info "Explored successfully | location='$explore_loc_num' output='$output'"
 }
 
 function eat::breakfast_boost() {
@@ -234,6 +177,24 @@ function breakfast_boosted() {
   sleep 118
 }
 
+function collect_pet_items() {
+  # Do work
+  local output
+  if ! output="$(worker "go=collectallpetitems")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+
+  # Validate output
+  log_warn "Unknown output to ${FUNCNAME[0]} | noutput='$noutput'"
+}
+
+################################################################################
+cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
+user_agent_header="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"
 ################################################################################
 function craft() {
   # Parse args
@@ -273,15 +234,6 @@ function craft() {
     exit 1
   fi
 }
-
-function item_to_nr() {
-  endpoint "https://farmrpg.com/item.php?id=${1:?item nr}" \
-  | sed -n 's/.*((\(.*\))).*/\1/p'
-}
-
-################################################################################
-cookie_header="Cookie: pac_ocean=FCCF5301; HighwindFRPG=IFqdJZwFRqmnzeaViYoVFg%3D%3D%3Cstrip%3Ee4ba7241425d3e0d14f6e4ba1e0241c993c18f9654e6281e2b2ff8e0c66bbf4cba0a3095929d860bc337f96e700a9ef4f4a45fa02de212a62918d250cd44ca3b"
-user_agent_header="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"
 
 function worker() {
 
@@ -331,6 +283,7 @@ function worker() {
       -H "TE: trailers"
     local -r rc=$?
     cat "$tmp_file"
+    cat "$tmp_file" > output.txt
     return $rc
   )"
   local rc="$?"
@@ -340,9 +293,10 @@ function worker() {
   fi
   log_debug "Sent req | output='$(log_field "$output")'"
 
-  # Log extra if the output is not null
-  [ -z "$output" ] && {
+  # Log extra and do extra if the output is not null
+  [ -n "$output" ] && {
   local -r decoded_output="$(brotli -d <<< "$output")"
+  echo "$output" > output.txt
   local rc="$?"
   if (( rc != 0 )); then
     log_err "Failed to brotli decode | output='$output'"
@@ -548,7 +502,71 @@ function planty() {
     harvest
     planty "$plant"
   ) &
-  log_info "Sleeping until the plant is grown | GROW_TIME='$GROW_TIME' harvester_pid='$!'"
+  harvester_pid="$!"
+  log_info "Sleeping until the plant is grown | GROW_TIME='$GROW_TIME' harvester_pid='$harvester_pid'"
+}
+
+function _donate() {
+  # Parse args
+  if ! item_id="$(item::name_to_num "$1")"; then
+    log_err "Failed to get item ID"
+    exit 1
+  fi
+  local -r amount="${2:?How many to donate}"
+
+  # Do work
+  local output
+  if ! output="$(worker "go=donatecomm" "amt=${amount}")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+  # Validate output
+  if [ "$noutput" == "success" ]; then
+    log_info "Donated to community center successfully | item='$1/$item_id' amount='$amount'"
+  elif [ "$noutput" == "notenough" ]; then
+    log_err "You do not have enough items to donate | noutput='$noutput'"
+    exit 1
+  else
+    log_warn "Unknown output to donate | output='$output'"
+    exit 1
+  fi
+}
+
+function pig::feed_one() {
+  # Parse args
+  local -r pig_nr="${1:?Starting pig}"
+
+  # Do work
+  local output
+  if ! output="$(worker "go=feedpig" "num=${pig_nr}")"; then
+    log_err "Failed to invoke worker"
+    exit 1
+  fi
+
+  # Parse output
+  local -r noutput="${output//[$'\001\002\003\004\200\203']}"
+  # Validate output
+  if [ "$noutput" == "success" ]; then
+    log_info "Successfully fed pig | pig_nr='$pig_nr'"
+  elif [ "$noutput" == "alreadytoday" ]; then
+    log_err "You already fed this pig today | pig_nr='$pig_nr'"
+    exit 1
+  else
+    log_warn "Unknown output to pig::feed_one | output='$output'"
+    exit 1
+  fi
+}
+
+function feed_pigs() {
+  local -r start="${1:?First pig to feed}"
+  local -r amount="${2:?Number of pigs to feed}"
+  for ((i = start; i <= start + amount; i++)); do
+    pig::feed_one "$i"
+  done
+  log_info "Fed pigs | amount='$amount'"
 }
 
 ################################################################################
@@ -559,11 +577,9 @@ function main() {
       buy|sell|_donate \
       |craft|collect_mail \
       |explore \
+      |feed_pigs|collect_pet_items \
       |planty|plant|harvest \
-      |endpoint \
       |camp_mailbox|rapid_explore|breakfast_boosted \
-      |item_to_nr \
-      |testing \
       ) "$1" "${@:2}"; return ;;
       *) log_err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; exit 1 ;;
     esac
