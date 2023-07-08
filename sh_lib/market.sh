@@ -53,3 +53,54 @@ function sell() {
     exit 1
   fi
 }
+
+function sell_cap::one() {
+  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
+  local -r item_nr="$(item::name_to_num "$item_name")"
+  sell_cap::one::nr "$item_nr"
+}
+
+function sell_cap::one::nr() {
+  local -r item_nr="${1:?}"
+  local -r qty="$(jq -r '.["'"$item_nr"'"]' <<< "$(inventory)")"
+  if [ "$qty" == "null" ] || (( qty <= 0 )); then
+    log::err "Do not have any item to sell | item='$item_name' qty='$qty'"
+    exit 1
+  fi
+  sell "$item_name" "$qty"
+}
+
+function sell_cap() {
+  local item_nr
+  for item_nr in $(
+    jq -r --arg inv_cap "$FARMRPG_MAX_INVENTORY" 'to_entries[] | select(.value >= ($inv_cap|tonumber)) | .key' <(inventory)
+  ); do
+    item_name="$(item::num_to_name "$item_nr")"
+    # Skip keepable items
+    case "$(_sale_decision "$item_name")" in
+      keep) log::debug "Item is at capacity but is keepable | item_nr='$item_nr' item_name='$item_name'" ;;
+      sell_some)
+        log::info "Item is at capacity - selling half | item_nr='$item_nr' item_name='$item_name'"
+        sell "$item_name" "$(( FARMRPG_MAX_INVENTORY / 2 ))"
+        ;;
+      unknown)
+        log::warn "Item is at capacity - selling half | item_nr='$item_nr' item_name='$item_name'"
+        sell "$item_name" "$(( FARMRPG_MAX_INVENTORY / 2 ))"
+        ;;
+      sell_all)
+        log::info "Item is at capacity - selling all | item_nr='$item_nr' item_name='$item_name'"
+        sell "$item_name" "$FARMRPG_MAX_INVENTORY"
+        ;;
+    esac
+  done
+}
+
+function _sale_decision() {
+  case "$1" in
+    straw|minnows|board|blue_dye|iron|nails|rope|twine|gummy_worms|sandstone) echo "keep" ;;
+    lantern|plumbfish|barracuda|spiral_shell) echo "sell_all" ;;
+    serpent_eel|sea_catfish|swordfish) echo "sell_some" ;;
+    *) echo "unknown" ;;
+  esac
+  return 1
+}

@@ -12,12 +12,9 @@ function set_farmseed() {
     exit 1
   fi
   log::debug "We tried to set farm seed counts | output='$output'"
-  if [ "$output" == $'3' ]; then
+  if [ "$output" == $'3' ] || [ "$output" == "" ]; then
     # TODO promote this to INFO instead of DEBUG if this is the invoking action
     log::debug "Set farm seed successfully"
-  elif [ "$output" == "" ]; then
-    log::err "Failed to set farm seed"
-    exit 1
   else
     log::warn "Unknown output to setting farm seed | output='$output'"
   fi
@@ -31,26 +28,31 @@ function harvest() {
   fi
 
   # Deal with output
-  if [ "$output" == $'\003\003\200success\003' ]; then
-    log::info "Harvested all successfully"
-  elif [ "$output" == "" ]; then
-    log::err "Failed to harvest all | output='$output'"
-    exit 1
-  else
-    log::warn "Unknown output to harvest | output='$output'"
-  fi
+  case "$output" in
+    success) log::info "Harvested all successfully" ;;
+    "") log::err "Failed to harvest all | output='$output'" ; exit 1;;
+    *) log::warn "Unknown output to harvest | output='$output'" ; exit 1 ;;
+  esac
 }
 
 function _normalize_planted() {
-  (( $# == 0 )) && return
-  if [[ "${output: -1}" == "s" ]] && (( ${#output} > 1 )); then
-    local length ans
-    length=${#output}
-    ans="$(echo "${output:0:length-1}" | tr '[:upper:]' '[:lower:]')"
-    case "$ans" in
+  # Exit early if no args
+  (( $# == 0 )) && return 1
+
+  # lowercase
+  output="$(tr '[:upper:]' '[:lower:]' <<< "$1")"
+
+  # Strip unneeded trailing s
+  if [[ "${output: -1}" == "s" ]]; then
+    output="${output:0:${#output}-1}"
+  fi
+
+  # There's a crop to normalize
+  if (( ${#output} > 1 )); then
+    case "$output" in
       hop) echo "hops" ;;
       potatoe) echo "potato" ;;
-      *) echo "$ans" ;;
+      *) echo "$output" ;;
     esac
     return
   fi

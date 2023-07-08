@@ -20,6 +20,7 @@ function log::info() { log::_impl --level "info" -- "$@" ; }
 function log::warn() { log::_impl --level "warn" -- "$@" ; }
 function log::debug() { log::_impl --level "debug" -- "$@" ; }
 
+PREV_MSG=""
 # shellcheck disable=SC2059
 function log::_impl() {
   # Parse args
@@ -44,6 +45,12 @@ function log::_impl() {
     printf "%s" "$*"
     printf "$(log::_color "clear")\n"
   )"
+
+  # Deal with repeated logs
+  if [ "$PREV_MSG" == "$*" ]; then
+    :
+  fi
+  PREV_MSG="$*"
 
   # Handle the log
   echo "$log_msg" | _remove_ansii >> "$LOGFILE"

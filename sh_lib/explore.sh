@@ -42,13 +42,13 @@ function explore::one() {
 function explore() {
   local remaining_stamina=999
   while (( remaining_stamina > 0 )); do
-    remaining_stamina="$(explore::one "$@")"
+    remaining_stamina="$(explore::one "$@" | tr -d ',')"
   done
 }
 
 function rapid_explore() {
   while True; do
-    ( ./bin/cli explore 5 & ) &>/dev/null
+    ( ./bin/cli explore 7 & ) &>/dev/null
     sleep "$(rapid_tap_delay)"
   done
 }

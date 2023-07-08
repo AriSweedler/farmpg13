@@ -36,28 +36,43 @@ function craft_max() {
   local -r item_nr="$(item::name_to_num "$item")"
 
   # Fetch recipe
-  local -r recipe='{"22": 1, "95": 3, "35": 2}'
+  local -r recipe="$(jq -c -r '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"
+  if [ "$recipe" == "null" ]; then
+    log::err "No recipe for this item"
+    exit 1
+  fi
+  log::debug "We know how to craft item | item='$item' item_nr='$item_nr' recipe='$recipe'"
 
   # Do some math to figure out how many we can craft
+  # We check how many items we can craft in terms of inventory space
+  # Then we check in terms of materials we have
   local -r count="$(python3 << EOF
+# Load all the data into python
 import json
 recipe = json.loads('$recipe')
 inventory = json.loads('$(inventory)')
-want_craft_inventory = int(($FARMRPG_MAX_INVENTORY - inventory.get('$item_nr', 0)) / $FARMRPG_CRAFTING_BOOST)
-want_craft_materials = dict()
-for key, value in recipe.items():
-    want_craft_materials[key] = 0
-    if key not in inventory: want_craft_inventory = 0
-    while inventory[key] > recipe[key]:
-      inventory[key] -= recipe[key]
-      want_craft_materials[key] += 1
 
-import sys
-want_craft_materials2=min(want_craft_materials.values())
-ans = min(want_craft_inventory, min(want_craft_materials.values()))
-print(f"{want_craft_inventory=} {want_craft_materials=} {want_craft_materials2=} {ans=}", file=sys.stderr)
-print(ans)
+# Figure out how many we can craft to hit max inventory
+want_craft_inventory = int(($FARMRPG_MAX_INVENTORY - inventory.get('$item_nr', 0)) / $FARMRPG_CRAFTING_BOOST)
+
+# Figure how many we can craft given our materials
+want_craft_materials_dict = dict()
+for key, value in recipe.items():
+    want_craft_materials_dict[key] = 0
+    if key not in inventory:
+      want_craft_inventory = 0
+      continue
+    while inventory[key] >= recipe[key]:
+      inventory[key] -= recipe[key]
+      want_craft_materials_dict[key] += 1
+want_craft_materials = min(want_craft_materials_dict.values())
+
+# Give the answer
+print(min(want_craft_inventory, want_craft_materials))
 EOF
 )"
+  log::debug "Trying to craft as many as we can | item='$item' count='$count'"
+
+  # Do work
   craft "${item:?}" "${count:?}"
 }
