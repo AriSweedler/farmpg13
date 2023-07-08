@@ -82,6 +82,12 @@ function plant() {
   fi
 
   # Parse response
+  case "$output" in
+    "|") log::err "Failed to plant | output='$output'" ; exit 1;;
+    *) log::info "Successfully planted | output='$output'" ;;
+  esac
+
+  # Parse and then normalize the item
   IFS="|" read -r item_response grow_time <<< "$output"
   if ! nitem="$(_normalize_planted "$item_response")" ; then
     log::err "Failed to normalize item in response | output='$output' item_response='$item_response'"

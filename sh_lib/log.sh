@@ -1,3 +1,20 @@
+LOGFILE="farmpg13.log"
+function log::err() {
+  log::_impl --level "err" -- "$@"
+}
+
+function log::info() {
+  log::_impl --level "info" -- "$@"
+}
+
+function log::warn() {
+  log::_impl --level "warn" -- "$@"
+}
+
+function log::debug() {
+  log::_impl --level "debug" -- "$@"
+}
+
 # shellcheck disable=SC2028
 function log::_color() {
   case "$1" in
@@ -10,17 +27,10 @@ function log::_color() {
   esac
 }
 
-LOGFILE="farmpg.log"
 function _remove_ansii() {
   awk '{ gsub(/\033\[[0-9;]*m/, ""); print $0 }'
 }
 
-function log::err() { log::_impl --level "err" -- "$@" ; }
-function log::info() { log::_impl --level "info" -- "$@" ; }
-function log::warn() { log::_impl --level "warn" -- "$@" ; }
-function log::debug() { log::_impl --level "debug" -- "$@" ; }
-
-PREV_MSG=""
 # shellcheck disable=SC2059
 function log::_impl() {
   # Parse args
@@ -46,17 +56,42 @@ function log::_impl() {
     printf "$(log::_color "clear")\n"
   )"
 
-  # Deal with repeated logs
-  if [ "$PREV_MSG" == "$*" ]; then
-    :
-  fi
-  PREV_MSG="$*"
-
   # Handle the log
   echo "$log_msg" | _remove_ansii >> "$LOGFILE"
-  if [ "$level" != "debug" ]; then
-    echo "$log_msg" >&2
+  if [ "$level" == "debug" ]; then
+    return
   fi
+  log_msg="$(log::_handle_prev_msg_state "$log_msg" "$@")"
+  echo "$log_msg" >&2
+}
+
+function log::_handle_prev_msg_state() {
+  local -r log_msg="${1:?}"
+  shift 1
+
+  local prev_msg_file
+  if ! prev_msg_file="$(log::_init_prev_msg)"; then
+    echo "ERROR:: Failed to init prev_msg_file='$prev_msg_file'" >&2
+    exit 1
+  fi
+
+  # If it is a repeated message, then overwrite the last log
+  local ans="$log_msg"
+  touch "$prev_msg_file" "$prev_msg_file.repeated"
+  LOG_REPEAT=$(cat "$prev_msg_file.repeated")
+  if [ "$(cat "$prev_msg_file")" == "$*" ]; then
+    ans="$log_msg - repeated $((++LOG_REPEAT)) times"
+    log::overwrite_last_log
+  else
+    LOG_REPEAT=0
+  fi
+  printf "%s" "$LOG_REPEAT" > "$prev_msg_file.repeated"
+
+  # Update state
+  printf "%s" "$*" > "$prev_msg_file"
+
+  # Return
+  printf "%s" "$ans"
 }
 
 function log::_caller() {
@@ -96,4 +131,21 @@ function log::field() {
     ;;
   2) printf "NULL" ;;
   esac
+}
+
+function log::_init_prev_msg() {
+  local prev_msg_dir="./.prev_msg"
+  if ! mkdir -p "$prev_msg_dir"; then
+    echo "ERROR:: Failed to create prev_msg_dir='$prev_msg_dir'" >&2
+    exit 1
+  fi
+  echo "$prev_msg_dir/$(tty | tr '/' '_')"
+}
+
+function log::overwrite_last_log() {
+  # Move the cursor up one line
+  printf "\033[1F"
+
+  # Clear the entire line
+  printf "\033[2K"
 }

@@ -13,7 +13,7 @@ function explore::one() {
         loc="$(item::name_to_location "$item")"
         explore_loc_num="$(item::location_to_num "$loc")"
         shift 2
-        log::info "Dereferenced item into explore location | item='$item' loc='$loc'"
+        log::debug "Dereferenced item into explore location | item='$item' loc='$loc'"
         ;;
       --loc)
         explore_loc_num="$(item::location_to_num "$2")"
@@ -34,7 +34,8 @@ function explore::one() {
   fi
   local remaining_stamina
   remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output")"
-  log::info "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
+  log::debug "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
+  log::info "Explored successfully | loc='$loc'"
 
   echo "$remaining_stamina"
 }
