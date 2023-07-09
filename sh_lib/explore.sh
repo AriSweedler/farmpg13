@@ -1,6 +1,3 @@
-# item
-# location
-# location number
 function explore::one() {
   # Parse args
   set -e
@@ -23,14 +20,14 @@ function explore::one() {
         explore_loc_num="$1"
         shift 1
         ;;
-      *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
+      *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; return 1 ;;
     esac
   done
   set +e
 
   if ! output="$(worker "go=explore" "id=${explore_loc_num}")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
   local remaining_stamina
   remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output")"

@@ -52,13 +52,13 @@ function worker() {
   local rc="$?"
   if (( rc != 0 )); then
     log::err "Failed to send curl req | url='$url'"
-    exit 1
+    return 1
   fi
   log::debug "Sent req | output='$(log::field "$output")'"
 
   if (( rc != 0 )); then
     log::err "Failed to brotli decode the output | url='$url' "
-    #exit 1
+    #return 1
   fi
   echo "$output"
 }
@@ -97,13 +97,13 @@ function inventory() {
   local rc="$?"
   if (( rc != 0 )); then
     log::err "Failed to send curl req | url='$url'"
-    exit 1
+    return 1
   fi
   log::debug "Sent req | output='$(log::field "$output")'"
 
   if (( rc != 0 )); then
     log::err "Failed to brotli decode the output | url='$url' "
-    #exit 1
+    #return 1
   fi
 
   echo "$output" | python3 "./scraped/scripts/inventory.py"

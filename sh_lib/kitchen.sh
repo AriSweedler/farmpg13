@@ -7,13 +7,13 @@ function cook::put_in_oven() {
   local item_nr
   if ! item_nr="$(item::name_to_num "${item}")"; then
     log::err "Failed to convert item name to num | item='$item'"
-    exit 1
+    return 1
   fi
 
   # Do work
   if ! output="$(worker "go=cookitem" "id=$item_nr" "oven=$oven_nr")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
   log::info "Put a meal in the oven | meal='$item' output='$output'"
 }
@@ -22,7 +22,7 @@ function cook::loop::stir() {
   local -r oven_nr="${1:?}"
   if ! output="$(worker "go=stirmeal" "oven=$oven_nr")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
   log::info "Stirred a meal | oven_nr='$oven_nr' output='$output'"
 
@@ -34,7 +34,7 @@ function cook::loop::taste() {
   local -r oven_nr="${1:?}"
   if ! output="$(worker "go=tastemeal" "oven=$oven_nr")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
   log::info "Tasted a meal | oven_nr='$oven_nr' output='$output'"
 
@@ -46,7 +46,7 @@ function cook::loop::season() {
   local -r oven_nr="${1:?}"
   if ! output="$(worker "go=seasonmeal" "oven=$oven_nr")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
   log::info "Seasoned a meal | oven_nr='$oven_nr' output='$output'"
 
@@ -58,13 +58,13 @@ function cook::collect() {
   local -r oven_nr="${1:?}"
   if ! output="$(worker "go=cookready" "oven=$oven_nr")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
 
   case "$output" in
     success) log::info "Collected a meal | oven_nr='$oven_nr'" ;;
-    notready) log::err "Meal is not ready!" ; exit 1 ;;
-    *) log::err "Unknown output to worker | output='$output'" ; exit 1 ;;
+    notready) log::err "Meal is not ready!" ; return 1 ;;
+    *) log::err "Unknown output to worker | output='$output'" ; return 1 ;;
   esac
 }
 
@@ -108,5 +108,5 @@ function cook::bone_broth() {
 }
 
 function cook::onion_soup() {
-  cook::_impl "onion_soup" "2280"
+  cook::_impl "onion_soup" "2600"
 }

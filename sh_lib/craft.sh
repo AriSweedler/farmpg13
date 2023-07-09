@@ -2,13 +2,13 @@ function craft() {
   # Parse args
   if ! item_id="$(item::name_to_num "$1")"; then
     log::err "Failed to get item ID"
-    exit 1
+    return 1
   fi
   local quantity="${2:?How many to craft}"
   # quantity=$(python -c "import math; print(math.ceil($quantity / $FARMRPG_CRAFTING_BOOST))")
   if (( quantity == 0 )); then
     log::err "You must craft at least 1 item"
-    exit 1
+    return 1
   fi
   log::debug "Crafting 80% of desired output because of perks | quantity='$2' adjusted='$quantity'"
 
@@ -16,19 +16,15 @@ function craft() {
   local output
   if ! output="$(worker "go=craftitem" "id=${item_id}" "qty=${quantity}")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
 
   # Validate output
-  if [ "$output" == "success" ]; then
-    log::info "Successfully crafted | item='$1/$item_id' quantity='$quantity'"
-  elif [ "$output" == "cannotafford" ]; then
-    log::err "Missing a resource necessary to craft this"
-    exit 1
-  else
-    log::warn "Unknown output to craft | output='$output'"
-    exit 1
-  fi
+  case "$output" in
+    success) log::info "Successfully crafted | item='$1/$item_id' quantity='$quantity'" ;;
+    cannotafford) log::err "Missing a resource necessary to craft this" ; return 1 ;;
+    *) log::warn "Unknown output to craft | output='$output'" ; return 1 ;;
+  esac
 }
 
 function craft_max() {
@@ -39,7 +35,7 @@ function craft_max() {
   local -r recipe="$(jq -c -r '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"
   if [ "$recipe" == "null" ]; then
     log::err "No recipe for this item"
-    exit 1
+    return 1
   fi
   log::debug "We know how to craft item | item='$item' item_nr='$item_nr' recipe='$recipe'"
 

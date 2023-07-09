@@ -11,17 +11,18 @@ function main() {
       buy|sell|sell_cap|sell_cap::one \
       |planty|plant|harvest \
       |craft|craft_max \
+      |item::ensure_have \
       |collect_mail \
       |explore \
       |camp_mailbox|rapid_explore|breakfast_boosted \
       |_donate|collect_pet_items \
       |feed_pigs \
       |inventory \
-      |item|item_nr_to_name \
       |cook::bone_broth|cook::onion_soup \
       |fish::net::one|fish::net::all \
+      |goodmorning \
       ) "$1" "${@:2}"; return ;;
-      *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; exit 1 ;;
+      *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
     esac
   done
 }

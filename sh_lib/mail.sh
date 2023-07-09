@@ -3,7 +3,7 @@ function collect_mail() {
   local output
   if ! output="$(worker "go=collectallmailitems")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
 
   # Validate output
@@ -11,6 +11,6 @@ function collect_mail() {
     log::info "Successfully collected items"
   else
     log::warn "Unknown output to 'collectallmailitems' | output='$output'"
-    exit 1
+    return 1
   fi
 }

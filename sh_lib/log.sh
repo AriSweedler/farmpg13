@@ -15,6 +15,10 @@ function log::debug() {
   log::_impl --level "debug" -- "$@"
 }
 
+function log::dev() {
+  log::_impl --level "dev" -- "[DEVELOPMENT] " "$@"
+}
+
 # shellcheck disable=SC2028
 function log::_color() {
   case "$1" in
@@ -23,7 +27,8 @@ function log::_color() {
     info) echo '\e[32m' ;;
     warn) echo '\e[33m' ;;
     debug) echo '\e[34m' ;;
-    *) echo "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; exit 1 ;;
+    dev) echo '\e[36m' ;;
+    *) echo "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
   esac
 }
 
@@ -41,7 +46,7 @@ function log::_impl() {
   while (( $# > 0 )); do case "$1" in
     --level) level="$2"; shift 2 || exit 40 ;;
     --) shift 1 && break ;;
-    *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'" >&2; exit 1 ;;
+    *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'" >&2; return 1 ;;
   esac ; done
 
   # Create the log
@@ -72,7 +77,7 @@ function log::_handle_prev_msg_state() {
   local prev_msg_file
   if ! prev_msg_file="$(log::_init_prev_msg)"; then
     echo "ERROR:: Failed to init prev_msg_file='$prev_msg_file'" >&2
-    exit 1
+    return 1
   fi
 
   # If it is a repeated message, then overwrite the last log
@@ -137,7 +142,7 @@ function log::_init_prev_msg() {
   local prev_msg_dir="./.prev_msg"
   if ! mkdir -p "$prev_msg_dir"; then
     echo "ERROR:: Failed to create prev_msg_dir='$prev_msg_dir'" >&2
-    exit 1
+    return 1
   fi
   echo "$prev_msg_dir/$(tty | tr '/' '_')"
 }

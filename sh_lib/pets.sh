@@ -3,7 +3,7 @@ function collect_pet_items() {
   local output
   if ! output="$(worker "go=collectallpetitems")"; then
     log::err "Failed to invoke worker"
-    exit 1
+    return 1
   fi
 
   # Validate output
