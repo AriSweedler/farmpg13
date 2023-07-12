@@ -13,8 +13,9 @@ def normal_fishing_loop():
 
         # Buy worms when we need to
         if worms <= 20:
+            os.system('./bin/cli sell_cap')
             os.system('./bin/cli buy worms 999')
-            worms = 500
+            worms = 600
 
         # Catch a fish
         catch_fish()

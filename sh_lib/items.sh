@@ -111,13 +111,16 @@ function item::ensure_have() {
 
 function item::procure() {
   local -r item_name="$(echo "${1:?}" | tr '-' '_')"
-  local -r i_get_more="${2:?}"
+  local i_get_more="${2:?}"
   local -r procure_method="$(item::procure::method "$item_name")"
   case "$(item::procure::method "$item_name")" in
     farm)
       log::info "Procuring more via farming | item_name='$item_name'"
       while (( i_get_more > 0 )); do
-        planty "$item_name"
+        if ! planty "$item_name"; then
+          log::err "Failed to plant for procurement | item_name='$item_name'"
+          return 1
+        fi
         i_get_more=$(( i_get_more - FARMRPG_PLOTS ))
       done
       ;;
@@ -170,7 +173,7 @@ function item::procure::method() {
 
   case "$item_name" in
     worms|*_seeds) echo "buy" ;;
-    corn) echo "farm" ;;
+    pepper|tomato|potato|corn) echo "farm" ;;
     feed) echo "feedmill_corn" ;;
     *) echo "unknown" ;;
   esac

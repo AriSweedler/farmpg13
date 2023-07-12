@@ -10,11 +10,11 @@ function buy() {
 
   # Validate output
   if [ "$output" == "success" ]; then
-    log::info "Bought successfully | item='$1/$item_id' quantity='$quantity' output='$output'"
+    log::info "Bought successfully | item='$1/$item_id' quantity='$quantity'"
   elif [ "$output" == "error" ]; then
-    log::err "Failed to buy | output='$output'"
+    log::err "Failed to buy"
     return 1
-  elif (( output < quantity )) && (( output > 0 )); then
+  elif (( output < quantity )) && (( output >= 0 )); then
     local -r max_amount="$output"
     log::debug "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
     buy "$1" "$max_amount"
@@ -84,8 +84,7 @@ function sell_cap() {
         sell "$item_name" "$(( FARMRPG_MAX_INVENTORY / 2 ))"
         ;;
       unknown)
-        log::warn "Item is at capacity - selling half | item_nr='$item_nr' item_name='$item_name'"
-        sell "$item_name" "$(( FARMRPG_MAX_INVENTORY / 2 ))"
+        log::warn "Item is at capacity - UNCERTAIN how to handle it | item_nr='$item_nr' item_name='$item_name' fix='sh_lib/market.sh'"
         ;;
       sell_all)
         log::info "Item is at capacity - selling all | item_nr='$item_nr' item_name='$item_name'"
@@ -101,19 +100,22 @@ function _sale_decision() {
     *_seeds \
     |apple|orange|lemon|grapes \
     |eggs|milk \
-    |minnows|gummy_worms \
+    |minnows|gummy_worms|worms \
     |board|iron|nails|rope|twine \
     |broom|glass_bottle|iron_ring|straw|wood \
     |coal|stone|sandstone|blue_feathers|feathers \
-    |blue_dye) echo "keep" ;;
+    |blue_dye|bottle_rocket) echo "keep" ;;
 
     lantern|fancy_pipe|studry_shielf \
     |green_chromis|small_prawn) echo "sell_all" ;;
 
     plumbfish|barracuda|spiral_shell \
+    |fluorifish|green_jellyfish|jellyfish|marlin \
+    |blue_catfish|bone_fish|sunfish|trout|globber \
+    |ruby_fish|shrimp|skipjack|stingray \
     |serpent_eel|sea_catfish|swordfish \
+    |blue_tiger_fish|clam_shell|clownfish|conch_shell|red_starfish|seahorse|starfish \
     |blue_crab|blue_sea_bass|blue_shell|mackerel) echo "sell_some" ;;
-
     *) echo "unknown" ;;
   esac
   return 1

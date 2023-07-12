@@ -50,10 +50,22 @@ function gm::rest_farmhouse() {
   esac
 }
 
+gm::spinwheel() {
+  local output
+  if ! output="$(worker "go=spinfirst")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
+}
+
 function goodmorning() {
   gm::pet_chickens
   gm::pet_cows
   gm::work_storehouse
   gm::rest_farmhouse
+  gm::spinwheel
+  collect_pet_items
   feed_pigs 1 250
 }

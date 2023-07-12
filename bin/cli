@@ -9,7 +9,7 @@ function main() {
   while (( $# > 0 )); do
     case "$1" in
       buy|sell|sell_cap|sell_cap::one \
-      |planty|plant|harvest \
+      |planty|plant|harvest|time_until_farm_ready \
       |craft|craft_max \
       |item::ensure_have \
       |collect_mail \

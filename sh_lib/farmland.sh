@@ -84,7 +84,7 @@ function plant() {
 
   # Parse response
   case "$output" in
-    "|") log::err "Failed to plant | output='$output'" ; return 1;;
+    "|") log::err "Failed to plant | output='$output'" ; return 40;;
     *"|"*) log::debug "Successfully planted | output='$output'" ;;
   esac
 
@@ -123,17 +123,29 @@ function plant() {
 
 function planty() {
   local -r plant="${1:?}"
+  harvest
 
   if ! item::ensure_have "${plant}_seeds" "$FARMRPG_PLOTS"; then
     log::err "Could not ensure that we have enough seeds | seed='${plant}_seeds' want_to_have='$FARMRPG_PLOTS'"
     return 1
   fi
 
-  local grow_time
-  if ! grow_time="$(plant "$plant")"; then
-    log::err "Failed to plant | plant='$plant'"
-    return 1
-  fi
+  # Wait for prev plant, then replant
+  local rc grow_time
+  grow_time="$(plant "$plant")"
+  rc=$?
+  while (( rc != 0 )); do
+    if (( rc != 40 )); then
+      log::err "Failed to plant | plant='$plant' rc=$rc"
+      return 1
+    fi
+    seconds="$(time_until_farm_ready)"
+    log::warn "Waiting for current plants to grow... | plant='$plant' seconds='$seconds'"
+    sleep "$seconds"
+    harvest
+    grow_time="$(plant "$plant")"
+    rc=$?
+  done
 
   if [ -z "$grow_time" ]; then
     log::err "No one set 'grow_time' for us"
@@ -143,4 +155,33 @@ function planty() {
   sleep "$grow_time"
   log::debug "We are done sleeping"
   harvest
+}
+
+function time_until_farm_ready() {
+  # Measure
+  local now l8r sleep=10
+  log::info "Measuring how long it will take current crop to finish growing | measurement_time='$sleep'"
+  log::debug "Taking first reading"
+  now="$(page::panel_crops | bs4_helper::panel_crops::ready_percent)"
+
+  log::debug "Sleeping before taking second reading | sleep='$sleep'"
+  sleep "$sleep"
+
+  log::debug "Taking second reading"
+  l8r="$(page::panel_crops | bs4_helper::panel_crops::ready_percent)"
+  log::debug "Took 2 readings | now='$now' l8r=='$l8r'"
+
+  # Calculate
+  local left delta additional_waits seconds_until_done ans
+  left=$( bc <<< "100 - $l8r")
+  [ "$left" == "0" ] && echo "0" && return
+  delta=$(bc <<< "$l8r - $now")
+  additional_waits=$(python3 -c "print($left / $delta)")
+  seconds_until_done=$(bc <<< "$sleep*$additional_waits")
+  log::debug "In 'sleep' seconds we made 'delta' progress and have 'left' percent left. We must do 'aw' additional_waits, which will take us 's' seconds | sleep='$sleep' delta='$delta' left='$left' additional_waits='$additional_waits' seconds_until_done='$seconds_until_done'"
+  ans="$(python3 -c "print(int($seconds_until_done))")"
+  log::info "Plants will be ready to harvest in about | seconds='$ans'"
+
+  # Return answer to stdout
+  echo "$ans"
 }

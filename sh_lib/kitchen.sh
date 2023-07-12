@@ -104,9 +104,9 @@ function cook::_impl() {
 ############################## cook specific meals #############################
 
 function cook::bone_broth() {
-  cook::_impl "bone_broth" "510"
+  cook::_impl "bone_broth" "550"
 }
 
 function cook::onion_soup() {
-  cook::_impl "onion_soup" "2600"
+  cook::_impl "onion_soup" "2700"
 }

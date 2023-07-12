@@ -1,27 +1,7 @@
-function worker() {
-
-  # Parse args
-  function _build_url_query_params() {
-    local ans="" arg arg_sep="?"
-    # TODO put this macro into my snippet library # $for_arg_in_args
-    # $for_arg_in_args
-    # $done_args_in_args
-    while (( $# > 0 )); do
-      arg="$1"; shift 1
-      ans="${ans}${arg_sep}${arg}"
-      arg_sep="&"
-    done
-
-    # TODO put this macro into my snippet library # $return_stdout
-    echo "$ans"
-  }
-  local -r base="https://farmrpg.com/worker.php"
-  local -r url="${base}$(_build_url_query_params "$@")"
-  shift $#
-
-  log::debug "About to send req to farmrpg | url='$url'"
+function farmpg13::page() {
+  local -r url="https://farmrpg.com/${1:?}"
+  local -r tmp_file="${2:-$(mktemp)}"
   local -r output="$(\
-    local -r tmp_file="$(mktemp)"
     # shellcheck disable=SC2064
     trap "rm -f $tmp_file" EXIT
     curl \
@@ -56,9 +36,23 @@ function worker() {
   fi
   log::debug "Sent req | output='$(log::field "$output")'"
 
-  if (( rc != 0 )); then
-    log::err "Failed to brotli decode the output | url='$url' "
-    #return 1
-  fi
+  # Return to stdout
   echo "$output"
+}
+
+function inventory() {
+  farmpg13::page "inventory.php" | python3 "./scraped/scripts/inventory.py"
+}
+
+function page::panel_crops() {
+  farmpg13::page "panel_crops.php?cachebuster=380824"
+}
+
+function bs4_helper::panel_crops::ready_percent() {
+  python3 -c "from bs4 import BeautifulSoup
+import sys
+soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
+ans = soup.find('span', class_='c-progress-bar-fill pb11')['style'].split(':')[1].strip('%;')
+print(ans)
+  "
 }

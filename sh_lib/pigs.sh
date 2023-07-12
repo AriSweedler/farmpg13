@@ -21,7 +21,6 @@ function feed_mill::load::corn() {
   esac
 }
 
-
 function pig::feed_one() {
   # Parse args
   local -r pig_nr="${1:?Starting pig}"
@@ -60,9 +59,17 @@ function feed_pigs() {
     return 1
   fi
 
+  # Load corn into the storehouse - replenish stock
+  feed_mill::load::corn "$amount"
+
   # Feed the pigs
   for ((i = start; i < start + amount; i++)); do
     pig::feed_one "$i"
   done
   log::info "Fed all the pigs | amount='$amount'"
+
+  # Kick off tomorrow's work - just to make things easier
+  if ! item::ensure_have "corn" "$amount"; then
+    log::warn "Could not ensure we have enough corn to feed tomorrow's pigs | amount='$amount'"
+  fi
 }
