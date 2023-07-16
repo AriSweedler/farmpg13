@@ -125,7 +125,7 @@ function log::field() {
       return 0
     fi
   }
-  hay_non_ascii "$field"
+  hay_non_ascii "$(sed -e "s/Cat.s Meow/Cat's Meow/g" <<< "$field")"
   case $? in
   0) printf "%s" "$field" ;;
   1)

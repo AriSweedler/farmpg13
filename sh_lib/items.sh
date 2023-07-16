@@ -65,7 +65,7 @@ function item::inventory::from_name() {
   fi
 
   if [ "$ans" == "null" ]; then
-    log::warn "There is no key in inventory - answering '0' | key='$item_nr' item_name='$item_name'"
+    log::debug "There is no key in inventory - answering '0' | key='$item_nr' item_name='$item_name'"
     printf "0"
     return 0
   fi
@@ -156,7 +156,7 @@ function item::procure() {
       ;;
     feedmill_corn)
       local mill_corn=$(( (i_get_more+1) / 2 ))
-      feed_mill::load::corn "$mill_corn"
+      feed_mill::load "corn" "$mill_corn"
       ;;
     unknown)
       log::warn "TODO unknown how to procure the item | update ${BASH_SOURCE[0]} | item='$item_name'"

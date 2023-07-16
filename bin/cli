@@ -20,7 +20,7 @@ function main() {
       |inventory \
       |cook::bone_broth|cook::onion_soup \
       |fish::net::one|fish::net::all \
-      |goodmorning \
+      |goodmorning|gm::items \
       ) "$1" "${@:2}"; return ;;
       *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
     esac

@@ -1,6 +1,7 @@
 function craft() {
   # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
+  local -r item_name="${1:?}"
+  if ! item_id="$(item::name_to_num "$item_name")"; then
     log::err "Failed to get item ID"
     return 1
   fi
@@ -10,7 +11,7 @@ function craft() {
     log::err "You must craft at least 1 item"
     return 1
   fi
-  log::debug "Crafting 80% of desired output because of perks | quantity='$2' adjusted='$quantity'"
+  log::debug "Crafting 80% of desired output because of perks | quantity='$2' adjusted='$quantity' item_name='$item_name'"
 
   # Do work
   local output
@@ -20,9 +21,11 @@ function craft() {
   fi
 
   # Validate output
+  local -r item="$item_name/$item_nr"
   case "$output" in
-    success) log::info "Successfully crafted | item='$1/$item_id' quantity='$quantity'" ;;
-    cannotafford) log::err "Missing a resource necessary to craft this" ; return 1 ;;
+    success) log::info "Successfully crafted | item='$item' quantity='$quantity'" ;;
+    cannotafford) log::err "Missing a resource necessary to craft this | item='$item'" ; return 1 ;;
+    "") log::warn "Output to craft attempt is empty | item='$item' quantity='$quantity'" ; return 1 ;;
     *) log::warn "Unknown output to craft | output='$output'" ; return 1 ;;
   esac
 }
@@ -42,6 +45,11 @@ function craft_max() {
   # Do some math to figure out how many we can craft
   # We check how many items we can craft in terms of inventory space
   # Then we check in terms of materials we have
+  if ! FARMRPG_MAX_INVENTORY="$(item::inventory::from_name "iron")"; then
+    log::err "Could not find max inventory"
+    return 1
+  fi
+
   local -r count="$(python3 << EOF
 # Load all the data into python
 import json
@@ -64,11 +72,19 @@ for key, value in recipe.items():
 want_craft_materials = min(want_craft_materials_dict.values())
 
 # Give the answer
-print(min(want_craft_inventory, want_craft_materials))
+ans = min(want_craft_inventory, want_craft_materials)
+print(max(0, ans))
 EOF
 )"
+  if (( count == 0 )); then
+    log::debug "Cannot craft any | item='$item' count='$count'"
+    return 0
+  fi
   log::debug "Trying to craft as many as we can | item='$item' count='$count'"
 
   # Do work
-  craft "${item:?}" "${count:?}"
+  if craft "${item:?}" "${count:?}"; then
+    craft_max "$@"
+  fi
+  return 0
 }

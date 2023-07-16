@@ -24,6 +24,22 @@ function gm::pet_cows() {
   esac
 }
 
+function gm::feed_pigs() {
+  local output
+  if ! output="$(worker "go=feedallpigs")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  case "$output" in
+    success) log::info "Successfully fed all the pigs OwO" ;;
+    *) log::err "Failed to feed piggies (L)" ; return 1 ;;
+  esac
+
+  # Place broccoli in the feeder
+  feed_mill::load broccoli 25
+}
+
 function gm::work_storehouse() {
   local output
   if ! output="$(worker "go=work" "id=280551")"; then
@@ -35,6 +51,9 @@ function gm::work_storehouse() {
     success) log::info "Successfully worked in the storehouse" ;;
     *) log::err "Failed to work in the storehouse" ; return 1 ;;
   esac
+
+  # Use all that extra stamina
+  explore --item glass_orb
 }
 
 function gm::rest_farmhouse() {
@@ -50,7 +69,7 @@ function gm::rest_farmhouse() {
   esac
 }
 
-gm::spinwheel() {
+function gm::spinwheel() {
   local output
   if ! output="$(worker "go=spinfirst")"; then
     log::err "Failed to invoke worker"
@@ -60,12 +79,67 @@ gm::spinwheel() {
   log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
 }
 
+function gm::vault() {
+  log::warn "Rememebr to break the vault"
+  # TODO create a guessing algorithm & the ability to read vault outputs
+}
+
+function gm::items() {
+  # Pets
+  collect_pet_items
+
+  # Craft for the orchard
+  craft_max "glass_orb"
+  craft_max "glass_bottle"
+  craft_max "orange_juice"
+  craft_max "lemonade"
+  #craft "grape_juice" 2
+  craft_max "wine"
+
+  # Craft all the random objects and sell the proper ones
+  craft_max "twine"
+  craft_max "iron_ring"
+
+  craft_max "sturdy_shield"
+  craft_max "fancy_pipe"
+  craft_max "lantern"
+  sell_max "sturdy_shield"
+  sell_max "fancy_pipe"
+  sell_max "lantern"
+
+  craft_max "twine"
+  craft_max "iron_ring"
+  craft_max "cooking_pot"
+
+  # Place wine in the cellar
+  gm::wine
+}
+
+function gm::wine() {
+  craft_max "wine"
+  if ! wine_i_have="$(item::inventory::from_name "wine")"; then
+    log::err "Failed to read how much win we have"
+    return 1
+  fi
+
+  # Store all the wine we have
+  while ((wine_i_have-- > 0)); do
+    gm::store_wine
+  done
+}
+
 function goodmorning() {
+  # Farm stuff
   gm::pet_chickens
   gm::pet_cows
+  gm::feed_pigs
   gm::work_storehouse
   gm::rest_farmhouse
+
+  # Crafting
+  gm::items
+
+  # Town stuff
   gm::spinwheel
-  collect_pet_items
-  feed_pigs 1 250
+  gm::vault
 }

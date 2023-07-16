@@ -34,8 +34,8 @@ function farmpg13::page() {
     log::err "Failed to send curl req | url='$url'"
     return 1
   fi
-  log::debug "Sent req | output='$(log::field "$output")'"
-
+  # Print the first 50 chars including newlines
+  log::debug "Sent req | output='$(log::field "$output" | head -c 250 | tr -d '\n')'"
   # Return to stdout
   echo "$output"
 }

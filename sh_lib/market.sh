@@ -54,7 +54,7 @@ function sell() {
   fi
 }
 
-function sell_cap::one() {
+function sell_max() {
   local -r item_name="$(echo "${1:?}" | tr '-' '_')"
   local -r item_nr="$(item::name_to_num "$item_name")"
   sell_cap::one::nr "$item_nr"
@@ -101,7 +101,7 @@ function _sale_decision() {
     |apple|orange|lemon|grapes \
     |eggs|milk \
     |minnows|gummy_worms|worms \
-    |board|iron|nails|rope|twine \
+    |board|iron|nails|rope|twine|steel \
     |broom|glass_bottle|iron_ring|straw|wood \
     |coal|stone|sandstone|blue_feathers|feathers \
     |blue_dye|bottle_rocket) echo "keep" ;;
