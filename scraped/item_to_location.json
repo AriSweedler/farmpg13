@@ -106,5 +106,21 @@
   "magicite": "ember_lagoon",
   "runestone_17": "ember_lagoon",
   "large_chest_01": "ember_lagoon",
-  "diamond": "ember_lagoon"
+  "diamond": "ember_lagoon",
+  "oak": "whispering_creek",
+  "slimestone": "whispering_creek",
+  "salt_rock": "whispering_creek",
+  "unpolished_garnet": "whispering_creek",
+  "blue_gel": "whispering_creek",
+  "apple": "whispering_creek",
+  "thorns": "whispering_creek",
+  "red_berries": "whispering_creek",
+  "striped_feather": "whispering_creek",
+  "sour_root": "whispering_creek",
+  "lemon": "whispering_creek",
+  "orange": "whispering_creek",
+  "herbs": "whispering_creek",
+  "pearl_berries": "whispering_creek",
+  "raptor_egg": "whispering_creek",
+  "raptor_claw": "whispering_creek"
 }
