@@ -97,7 +97,7 @@ function sell_cap() {
 
 function _sale_decision() {
   case "$1" in
-    *_seeds \
+    *_seeds|*_spores \
     |apple|orange|lemon|grapes \
     |eggs|milk \
     |minnows|gummy_worms|worms \

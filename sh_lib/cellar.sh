@@ -1,4 +1,4 @@
-function store_wine() {
+function cellar::store_wine() {
   local output
   if ! output="$(worker "go=storewine" "id=280551")"; then
     log::err "Failed to invoke worker"

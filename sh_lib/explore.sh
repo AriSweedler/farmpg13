@@ -45,9 +45,18 @@ function explore() {
 }
 
 function rapid_explore() {
+  kill_pids=()
   while True; do
-    ( ./bin/cli explore 7 & ) &>/dev/null
+    ( explore "$@" & ) >/dev/null
+    kill_pids=( "${kill_pids[@]}" $! )
     sleep "$(rapid_tap_delay)"
+    if (( ${#kill_pids[@]} > 100 )); then
+      sleep 3
+      log::info "Killing ${#kill_pids[@]} explore processes processes"
+      for pid in "${kill_pids[@]}"; do
+        kill "$pid" &>/dev/null || true
+      done
+    fi
   done
 }
 

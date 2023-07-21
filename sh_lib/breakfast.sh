@@ -4,9 +4,14 @@ function breakfast_boosted() {
   harvest
   #eat::breakfast_boost
   local -r PLANT="carrot"
+  local seed
+  if ! seed="$(item::name_to_seed_name "$PLANT")"; then
+    log::err "Failed to find seed | plant='$PLANT'"
+    return 1
+  fi
   local grown=0
   while true; do
-    plant "$PLANT" &>/dev/null || buy "${PLANT}_seeds" 999
+    plant "$PLANT" &>/dev/null || buy "$seed" 999
     sleep 0.01
     harvest
     sleep 0.02
@@ -15,7 +20,7 @@ function breakfast_boosted() {
     if (( grown > 600 )); then
       # _donate "$PLANT" "$grown"
       sell "$PLANT" "$grown"
-      buy "${PLANT}_seeds" "$grown"
+      buy "$seed" "$grown"
       grown=0
     fi
   done) &

@@ -11,7 +11,7 @@ function item::num_to_name() {
 }
 
 function item::name_to_num() {
-  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
+  local -r item_name="$(echo "${1:?}" | tr '[:upper:]-' '[:lower:]_')"
   local num
   if ! num="$(jq -r '.["'"$item_name"'"]' "./scraped/item_to_number.json")"; then
     log::err "Could not run jq command to conver item name to num"
@@ -23,6 +23,21 @@ function item::name_to_num() {
   fi
 
   printf "%s" "$num"
+}
+
+function item::name_to_seed_name() {
+  local -r item_name="$(echo "${1:?}" | tr '[:upper:]-' '[:lower:]_')"
+  case "$item_name" in
+    mushroom) echo "mushroom_spores" ;;
+    pepper|eggplant|tomato|carrot|pea|cucumber\
+    |radish|onion|hops|potato|leek|watermelon\
+    |corn|cabbage|pumpkin|wheat|gold_pepper\
+    |gold_carrot|gold_pea|gold_cucumber|cotton\
+    |broccoli|gold_eggplant|sunflower|pine|beet\
+    |mega_beet|mega_sunflower|rice|spring\
+    |mega_cotton) echo "${item_name}_seeds" ;;
+    *) log::err "Unknown item - cannot convert to seeds | item_name='$item_name'"; return 1 ;;
+  esac
 }
 
 function item::name_to_location() {
@@ -124,9 +139,17 @@ function item::procure() {
         i_get_more=$(( i_get_more - FARMRPG_PLOTS ))
       done
       ;;
-    craft) craft "$item_name" "$i_get_more" ;;
-    buy) buy "$item_name" "$i_get_more" ;;
+    craft)
+      log::info "Procuring more via crafting | item_name='$item_name'"
+       # TODO turn an item into a recipe and turn the recipe into a multiplier
+       # and ensure have all those items
+      craft "$item_name" "$i_get_more"
+      ;;
+    buy)
+      log::info "Procuring more via buying | item_name='$item_name'"
+      buy "$item_name" "$i_get_more" ;;
     explore)
+      log::info "Procuring more via exploring | item_name='$item_name'"
       # Set up state so we know how many to get
       local i_have i_want
       if ! i_have="$(item::inventory::from_name "$item_name")"; then
@@ -139,11 +162,16 @@ function item::procure() {
       # Loop until we have enough
       i_have="$(item::inventory::from_name "$item_name")"
       while ((i_have < i_want)); do
-        if ! drink::orange_juice 1; then
-          log::err "Could not drink orange juice"
-          return 1
-        fi
-        explore --item "$item_name"
+        # Explore, drinking OJ if needed
+        for _ in {1..100}; do
+          if ! explore --item "$item_name"; then
+            if ! drink::orange_juice 1; then
+              log::err "Could not drink orange juice"
+              return 1
+            fi
+          fi
+        done
+        i_have="$(item::inventory::from_name "$item_name")"
       done
       ;;
     fish)
@@ -172,9 +200,11 @@ function item::procure::method() {
   local -r item_name="${1:?}"
 
   case "$item_name" in
-    worms|*_seeds) echo "buy" ;;
-    pepper|tomato|potato|corn) echo "farm" ;;
+    worms|*_seeds|*_spores) echo "buy" ;;
+    pepper|tomato|potato|corn|mushroom) echo "farm" ;;
+    mushroom_paste) item::ensure_have mushroom 320 && echo "craft" ;;
     feed) echo "feedmill_corn" ;;
+    raptor_egg) echo "explore" ;;
     *) echo "unknown" ;;
   esac
 }

@@ -37,7 +37,7 @@ function gm::feed_pigs() {
   esac
 
   # Place broccoli in the feeder
-  feed_mill::load broccoli 25
+  # feed_mill::load broccoli 1
 }
 
 function gm::work_storehouse() {
@@ -53,7 +53,7 @@ function gm::work_storehouse() {
   esac
 
   # Use all that extra stamina
-  explore --item glass_orb
+  # explore --item glass_orb
 }
 
 function gm::rest_farmhouse() {
@@ -69,6 +69,27 @@ function gm::rest_farmhouse() {
   esac
 }
 
+function gm::use_grape_juice() {
+  local -r plant="rice"
+  local -r seed="$(item::name_to_seed_name "$plant")"
+  local -r qty=$((2*FARMRPG_PLOTS))
+  if ! item::ensure_have "$seed" "$qty"; then
+    log::err "Could not ensure that we have enough seeds for grapejuice boost | seed='$seed' qty='$qty'"
+    return 1
+  fi
+  harvest
+
+  local gj_uses=2
+  log::info "Using grapejuice on plant | plant='$plant' gj_uses='$gj_uses'"
+  (set -e
+  while (( gj_uses > 0 )); do
+    plant "$plant"
+    farm::use_grapejuice
+    harvest
+    ((gj_uses--))
+  done)
+}
+
 function gm::spinwheel() {
   local output
   if ! output="$(worker "go=spinfirst")"; then
@@ -79,11 +100,6 @@ function gm::spinwheel() {
   log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
 }
 
-function gm::vault() {
-  log::warn "Rememebr to break the vault"
-  # TODO create a guessing algorithm & the ability to read vault outputs
-}
-
 function gm::items() {
   # Pets
   collect_pet_items
@@ -91,6 +107,7 @@ function gm::items() {
   # Craft for the orchard
   craft_max "glass_orb"
   craft_max "glass_bottle"
+  craft_max "apple_cider"
   craft_max "orange_juice"
   craft_max "lemonade"
   #craft "grape_juice" 2
@@ -100,12 +117,7 @@ function gm::items() {
   craft_max "twine"
   craft_max "iron_ring"
 
-  craft_max "sturdy_shield"
-  craft_max "fancy_pipe"
-  craft_max "lantern"
-  sell_max "sturdy_shield"
-  sell_max "fancy_pipe"
-  sell_max "lantern"
+  gm::item::money
 
   craft_max "twine"
   craft_max "iron_ring"
@@ -113,6 +125,17 @@ function gm::items() {
 
   # Place wine in the cellar
   gm::wine
+}
+
+function gm::items::money() {
+  craft_max "sturdy_bow"
+  craft_max "sturdy_shield"
+  craft_max "fancy_pipe"
+  craft_max "lantern"
+  sell_max "sturdy_bow"
+  sell_max "sturdy_shield"
+  sell_max "fancy_pipe"
+  sell_max "lantern"
 }
 
 function gm::wine() {
@@ -124,7 +147,7 @@ function gm::wine() {
 
   # Store all the wine we have
   while ((wine_i_have-- > 0)); do
-    gm::store_wine
+    cellar::store_wine
   done
 }
 
@@ -135,11 +158,12 @@ function goodmorning() {
   gm::feed_pigs
   gm::work_storehouse
   gm::rest_farmhouse
+  gm::use_grape_juice
 
   # Crafting
   gm::items
 
   # Town stuff
   gm::spinwheel
-  gm::vault
+  vault::crack
 }

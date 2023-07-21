@@ -8,7 +8,7 @@ function main() {
   # Dispatch to the acceptable functions
   while (( $# > 0 )); do
     case "$1" in
-      buy|sell|sell_cap|sell_cap::one \
+      buy|sell|sell_cap|sell_max \
       |planty|plant|harvest|time_until_farm_ready \
       |craft|craft_max \
       |item::ensure_have \
@@ -20,7 +20,7 @@ function main() {
       |inventory \
       |cook::bone_broth|cook::onion_soup \
       |fish::net::one|fish::net::all \
-      |goodmorning|gm::items \
+      |goodmorning|gm::items|gm::wine|gm::spinwheel|gm::vault \
       ) "$1" "${@:2}"; return ;;
       *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
     esac

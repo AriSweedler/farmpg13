@@ -64,7 +64,7 @@ function log::_impl() {
   # Handle the log
   echo "$log_msg" | _remove_ansii >> "$LOGFILE"
   if [ "$level" == "debug" ]; then
-    return
+    [ "$DEBUG" != "true" ] && return
   fi
   log_msg="$(log::_handle_prev_msg_state "$log_msg" "$@")"
   echo "$log_msg" >&2

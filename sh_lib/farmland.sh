@@ -1,13 +1,18 @@
 function set_farmseed() {
-  local item item_nr
+  local item seed_name seed_nr
   item="${1:?}"
-  if ! item_nr="$(item::name_to_num "${item}_seeds")"; then
-    log::err "Failed to convert item name to num | item='$item'"
+  if ! seed_name="$(item::name_to_seed_name "$item")"; then
+    log::err "Failed to convert item name to seed_num | item='$item'"
+    return 1
+  fi
+
+  if ! seed_nr="$(item::name_to_num "$seed_name")"; then
+    log::err "Failed to convert seed name to seed nr | seed_name='$seed_name'"
     return 1
   fi
 
   # Deal with output
-  if ! output="$(worker "go=setfarmseedcounts" "id=$item_nr")"; then
+  if ! output="$(worker "go=setfarmseedcounts" "id=$seed_nr")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -125,8 +130,9 @@ function planty() {
   local -r plant="${1:?}"
   harvest
 
-  if ! item::ensure_have "${plant}_seeds" "$FARMRPG_PLOTS"; then
-    log::err "Could not ensure that we have enough seeds | seed='${plant}_seeds' want_to_have='$FARMRPG_PLOTS'"
+  seed="$(item::name_to_seed_name "$plant")"
+  if ! item::ensure_have "$seed" "$FARMRPG_PLOTS"; then
+    log::err "Could not ensure that we have enough seeds | seed='$seed' want_to_have='$FARMRPG_PLOTS'"
     return 1
   fi
 
@@ -184,4 +190,17 @@ function time_until_farm_ready() {
 
   # Return answer to stdout
   echo "$ans"
+}
+
+function farm::use_grapejuice() {
+  local output
+  if ! output="$(worker "go=drinkgj" "id=280551")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  case "$output" in
+    success) log::info "Successfully drank grape juice" ;;
+    *) log::err "Failed to drink grape juice" ; return 1 ;;
+  esac
 }
