@@ -35,6 +35,7 @@ function fish::net::one() {
     *) log::debug "Cast a net | loc='$loc' mult='$mult' output='$output'" ;;
   esac
   log::info "Cast a net | loc='$loc' mult='$mult'"
+  echo "$output"
 }
 
 function fish::net::all() {

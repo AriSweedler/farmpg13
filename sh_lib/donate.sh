@@ -1,6 +1,6 @@
 function _donate() {
   # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
+  if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1
   fi

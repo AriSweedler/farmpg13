@@ -8,7 +8,7 @@ function worker() {
     # $done_args_in_args
     while (( $# > 0 )); do
       arg="$1"; shift 1
-      ans="${ans}${arg_sep}${arg}"
+      ans="${ans}${arg_sep}${arg/ /%20}"
       arg_sep="&"
     done
 

@@ -37,7 +37,9 @@ def hook_fish():
     log("Trying to hook a fish")
     global FISH_COLOR_RANGE
     global FISH_SCREEN_RANGE
-    return try_click_target(FISH_COLOR_RANGE, FISH_SCREEN_RANGE)
+    ans = try_click_target(FISH_COLOR_RANGE, FISH_SCREEN_RANGE)
+    time.sleep(0.01)
+    return ans
 
 
 @timeout(1)

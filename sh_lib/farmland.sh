@@ -6,7 +6,7 @@ function set_farmseed() {
     return 1
   fi
 
-  if ! seed_nr="$(item::name_to_num "$seed_name")"; then
+  if ! seed_nr="$(item_obj::num "$seed_name")"; then
     log::err "Failed to convert seed name to seed nr | seed_name='$seed_name'"
     return 1
   fi
@@ -161,6 +161,13 @@ function planty() {
   sleep "$grow_time"
   log::debug "We are done sleeping"
   harvest
+
+  if [ "$plant" == "potato" ]; then
+    log::warn "YOU ARE SO GENEROUS"
+    temple::sacrifice_item "Potato"
+    temple::sacrifice_item "Hot Potato"
+    log::warn "DONATIONS BUENO"
+  fi
 }
 
 function time_until_farm_ready() {

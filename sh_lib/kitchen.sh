@@ -5,7 +5,7 @@ function cook::put_in_oven() {
 
   # Parse args
   local item_nr
-  if ! item_nr="$(item::name_to_num "${item}")"; then
+  if ! item_nr="$(item_obj::num "${item}")"; then
     log::err "Failed to convert item name to num | item='$item'"
     return 1
   fi

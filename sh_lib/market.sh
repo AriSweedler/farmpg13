@@ -1,6 +1,6 @@
 function buy() {
   # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
+  if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1
   fi
@@ -9,14 +9,15 @@ function buy() {
   local -r output="$(worker "go=buyitem" "id=${item_id}" "qty=${quantity}")"
 
   # Validate output
-  if [ "$output" == "success" ]; then
-    log::info "Bought successfully | item='$1/$item_id' quantity='$quantity'"
-  elif [ "$output" == "error" ]; then
-    log::err "Failed to buy"
-    return 1
-  elif (( output < quantity )) && (( output >= 0 )); then
+  case "$output" in
+    success) log::info "Bought successfully | item='$1/$item_id' quantity='$quantity'" ; return 0;;
+    error) log::err "Failed to buy" ; return 1 ;;
+    "") log::err "Empty output to 'buy'" ; return 1 ;;
+  esac
+
+  if (( output < quantity )) && (( output >= 0 )); then
     local -r max_amount="$output"
-    log::debug "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
+    log::dev "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
     buy "$1" "$max_amount"
   else
     log::warn "Unknown output to buy | output='$output'"
@@ -26,7 +27,7 @@ function buy() {
 
 function sell() {
   # Parse args
-  if ! item_id="$(item::name_to_num "$1")"; then
+  if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1
   fi
@@ -56,7 +57,7 @@ function sell() {
 
 function sell_max() {
   local -r item_name="$(echo "${1:?}" | tr '-' '_')"
-  local -r item_nr="$(item::name_to_num "$item_name")"
+  local -r item_nr="$(item_obj::num "$item_name")"
   sell_cap::one::nr "$item_nr"
 }
 
@@ -97,25 +98,26 @@ function sell_cap() {
 
 function _sale_decision() {
   case "$1" in
-    *_seeds|*_spores \
-    |apple|orange|lemon|grapes \
-    |eggs|milk \
-    |minnows|gummy_worms|worms \
-    |board|iron|nails|rope|twine|steel \
-    |broom|glass_bottle|iron_ring|straw|wood \
-    |coal|stone|sandstone|blue_feathers|feathers \
-    |blue_dye|bottle_rocket) echo "keep" ;;
+    *_seeds |*_spores | apple | orange | lemon | grapes | eggs | milk | minnows \
+    | gummy_worms | worms | board | iron | nails | rope | twine | steel | broom \
+    | glass_bottle | iron_ring | straw | wood | coal | stone | sandstone | blue_feathers \
+    | feathers | blue_dye | bottle_rocket | bird_egg | flour | pepper | potato \
+    | tomato | green_diary | horseshoe | red_twine | sturdy_box | sweet_root \
+    | thorns | white_parchment | mealworms | mushroom | mushroom_paste | slimestone \
+    | steel_wire | grubs | carrot | eggplant | hops | leek | onion | 4-leaf_clover \
+    | ruby | spoon | axe | arrowhead | blue_gel | bucket | essence_of_slime | feed \
+    | hammer | red_berries) echo "keep" ;;
 
-    lantern|fancy_pipe|studry_shielf \
-    |green_chromis|small_prawn) echo "sell_all" ;;
+    lantern | fancy_pipe | studry_shielf | green_chromis | small_prawn \
+    | swordfish | barracuda | sea_catfish | plumbfish | spiral_shell | serpent_eel | ruby_coral \
+    ) echo "sell_all" ;;
 
-    plumbfish|barracuda|spiral_shell \
-    |fluorifish|green_jellyfish|jellyfish|marlin \
-    |blue_catfish|bone_fish|sunfish|trout|globber \
-    |ruby_fish|shrimp|skipjack|stingray \
-    |serpent_eel|sea_catfish|swordfish \
-    |blue_tiger_fish|clam_shell|clownfish|conch_shell|red_starfish|seahorse|starfish \
-    |blue_crab|blue_sea_bass|blue_shell|mackerel) echo "sell_some" ;;
+    fluorifish | green_jellyfish | jellyfish \
+    | marlin | blue_catfish | bone_fish | sunfish | trout | globber | ruby_fish \
+    | shrimp | skipjack | stingray | blue_tiger_fish \
+    | clam_shell | clownfish | conch_shell | red_starfish | seahorse | starfish \
+    | blue_crab | blue_sea_bass | blue_shell | mackerel | lemon_quartz_ring \
+    ) echo "sell_some" ;;
     *) echo "unknown" ;;
   esac
   return 1

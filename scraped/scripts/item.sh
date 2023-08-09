@@ -42,10 +42,5 @@ function item() {
   fi
   log::debug "Sent req | output='$(log::field "$output")'"
 
-  if (( rc != 0 )); then
-    log::err "Failed to brotli decode the output | url='$url' "
-    #return 1
-  fi
-
   echo "$output"
 }

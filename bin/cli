@@ -8,19 +8,20 @@ function main() {
   # Dispatch to the acceptable functions
   while (( $# > 0 )); do
     case "$1" in
-      buy|sell|sell_cap|sell_max \
-      |planty|plant|harvest|time_until_farm_ready \
-      |craft|craft_max \
-      |item::ensure_have \
-      |collect_mail \
-      |explore \
-      |camp_mailbox|rapid_explore|breakfast_boosted \
-      |_donate|collect_pet_items \
-      |feed_pigs \
-      |inventory \
-      |cook::bone_broth|cook::onion_soup \
-      |fish::net::one|fish::net::all \
-      |goodmorning|gm::items|gm::wine|gm::spinwheel|gm::vault \
+      buy | sell | sell_cap | sell_max \
+      | planty | plant | harvest | time_until_farm_ready \
+      | craft | craft_max \
+      | item::ensure_have | item_obj::num \
+      | collect_mail \
+      | explore \
+      | camp_mailbox | rapid_explore | breakfast_boosted \
+      | _donate | collect_pet_items \
+      | feed_pigs \
+      | inventory \
+      | cook::bone_broth | cook::onion_soup \
+      | fish::net::one | fish::net::all \
+      | goodmorning | gm::items | gm::wine | gm::spinwheel | gm::vault \
+      | temple::sacrifice_item | temple::cycle \
       ) "$1" "${@:2}"; return ;;
       *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
     esac

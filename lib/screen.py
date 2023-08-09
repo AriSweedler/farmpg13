@@ -46,9 +46,11 @@ def try_click_target(rgb_range, s):
 
     # Do the click
     logging.debug(f"We wanna clicky! at ({int(x)}, {int(y)})")
-    for i in [1, -1, 0]:
-        dx = 30 * (i)
-        click_x = x + dx
+    ddx = 0
+    for i in [0, 1, -1]:
+        dx = 40 * (i)
+        ddx += 20
+        click_x = min(max(270, x + dx), 670)
         click_y = y
-        pyautogui.click(click_x, click_y)
+        pyautogui.click(click_x, click_y, duration=0.02)
     return True

@@ -110,6 +110,7 @@ function gm::items() {
   craft_max "apple_cider"
   craft_max "orange_juice"
   craft_max "lemonade"
+  craft_max "arnold_palmer"
   #craft "grape_juice" 2
   craft_max "wine"
 
@@ -117,14 +118,14 @@ function gm::items() {
   craft_max "twine"
   craft_max "iron_ring"
 
-  gm::item::money
+  # gm::items::money
 
   craft_max "twine"
   craft_max "iron_ring"
   craft_max "cooking_pot"
 
   # Place wine in the cellar
-  gm::wine
+  # gm::wine
 }
 
 function gm::items::money() {
@@ -151,19 +152,61 @@ function gm::wine() {
   done
 }
 
+function gm::raptors() {
+  local output
+  if ! output="$(worker "go=incuallraptors")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  case "$output" in
+    success) log::info "Successfully incubated/pet raptors" ;;
+    *) log::err "Failed to incubate raptors" ; return 1 ;;
+  esac
+}
+
+function gm::wishing_well() {
+  # Parse args
+  if ! item_id="$(item_obj::num "$1")"; then
+    log::err "Failed to get item ID"
+    return 1
+  fi
+
+  local output
+  if ! output="$(worker "go=tossmanyintowell" "id=$item_id" "amt=9")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  case "$output" in
+    "Gold spent for") log::err "WHY THE FUCK DID YOU DO THIS" ;;
+    *) log::info "Wished in the well | output='$output'" ;;
+  esac
+}
+
 function goodmorning() {
   # Farm stuff
   gm::pet_chickens
   gm::pet_cows
   gm::feed_pigs
+  gm::raptors
   gm::work_storehouse
   gm::rest_farmhouse
-  gm::use_grape_juice
+  #gm::use_grape_juice
 
   # Crafting
   gm::items
 
   # Town stuff
   gm::spinwheel
-  vault::crack
+  gm::wishing_well "bacon"
+  #vault::crack
+  
+  # Friendship
+  gm::friends
+}
+
+function gm::friends() {
+  friendship::thomas
+  friendship::roomba
 }

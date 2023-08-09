@@ -1,6 +1,5 @@
 function explore::one() {
   # Parse args
-  set -e
   while (( $# > 0 )); do
     local explore_loc_num
     case "$1" in
@@ -23,7 +22,6 @@ function explore::one() {
       *) echo "Unknown argument in ${FUNCNAME[0]}: '$1'"; return 1 ;;
     esac
   done
-  set +e
 
   if ! output="$(worker "go=explore" "id=${explore_loc_num}")"; then
     log::err "Failed to invoke worker"
@@ -60,3 +58,8 @@ function rapid_explore() {
   done
 }
 
+function agent::xp::explore() {
+  explore --loc whispering_creek
+  item::ensure_have "mushroom_paste" "120"
+  craft_max "sturdy_bow"
+}

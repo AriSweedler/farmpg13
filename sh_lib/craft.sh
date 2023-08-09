@@ -1,7 +1,7 @@
 function craft() {
   # Parse args
   local -r item_name="${1:?}"
-  if ! item_id="$(item::name_to_num "$item_name")"; then
+  if ! item_nr="$(item_obj::num "$item_name")"; then
     log::err "Failed to get item ID"
     return 1
   fi
@@ -15,7 +15,7 @@ function craft() {
 
   # Do work
   local output
-  if ! output="$(worker "go=craftitem" "id=${item_id}" "qty=${quantity}")"; then
+  if ! output="$(worker "go=craftitem" "id=${item_nr}" "qty=${quantity}")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -32,7 +32,8 @@ function craft() {
 
 function craft_max() {
   local -r item="${1:?}"
-  local -r item_nr="$(item::name_to_num "$item")"
+  local item_nr
+  item_nr="$(item_obj::num "$item")"
 
   # Fetch recipe
   local -r recipe="$(jq -c -r '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"

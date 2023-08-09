@@ -1,17 +1,6 @@
-function item::num_to_name() {
-  local -r num="$1"
-  local -r item_name=$(jq -r '. as $json | keys[] | select($json[.] == "'"${num}"'")' "./scraped/item_to_number.json")
+function item_obj::num() {
+  local item_name="${1:?}"
 
-  if [ -z "$item_name" ]; then
-    log::err "Could not find item name for number $num"
-    return 1
-  fi
-
-  printf "%s" "$item_name"
-}
-
-function item::name_to_num() {
-  local -r item_name="$(echo "${1:?}" | tr '[:upper:]-' '[:lower:]_')"
   local num
   if ! num="$(jq -r '.["'"$item_name"'"]' "./scraped/item_to_number.json")"; then
     log::err "Could not run jq command to conver item name to num"
@@ -41,7 +30,7 @@ function item::name_to_seed_name() {
 }
 
 function item::name_to_location() {
-  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
+  local -r item_name="$(item::new::name "${1:?}")"
   local -r loc="$(jq -r '.["'"$item_name"'"]' "./scraped/item_to_location.json")"
   if [ "$loc" == "null" ]; then
     log::err "Could not turn item into a location | loc='$loc' item_name='$item_name'"
@@ -53,7 +42,7 @@ function item::name_to_location() {
 }
 
 function item::location_to_num() {
-  local -r loc="$(echo "${1:?}" | tr '-' '_')"
+  local -r loc="$(item::new::name "${1:?}")"
   local -r num="$(jq -r '.["'"$loc"'"]' "./scraped/location_to_number.json")"
   if [ "$num" == "null" ]; then
     log::err "Could not turn item into a location | num='$num'"
@@ -65,10 +54,10 @@ function item::location_to_num() {
 }
 
 function item::inventory::from_name() {
-  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
+  local -r item_name="$(item::new::name "${1:?Give an item name to find inventory for}")"
 
   local item_nr
-  if ! item_nr="$(item::name_to_num "$item_name")"; then
+  if ! item_nr="$(item_obj::num "$item_name")"; then
     log::err "Failed to get number for item | item='$item_name'"
     return 1
   fi
@@ -98,7 +87,7 @@ function item::number_to_name() {
 }
 
 function item::ensure_have() {
-  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
+  local -r item_name="$(item::new::name "${1:?}")"
   local -r i_want="${2:?}"
 
   # Check user state
@@ -115,48 +104,51 @@ function item::ensure_have() {
   fi
 
   # Do work
-  local -r i_get_more=$(( i_want - i_have ))
-  log::info "We need to procure | item='$item_name' i_want='$i_want' i_have='$i_have' i_get_more='$i_get_more'"
-
-  if ! item::procure "$item_name" "$i_get_more"; then
-    log::err "Failed to procure item | item='$item_name' i_get_more='$i_get_more'"
+  log::info "We need to procure | item='$item_name' i_want='$i_want' i_have='$i_have'"
+  if ! item::procure "$item_name" "$i_want"; then
+    log::err "Failed to procure item | item='$item_name'"
     return 1
   fi
 }
 
 function item::procure() {
-  local -r item_name="$(echo "${1:?}" | tr '-' '_')"
-  local i_get_more="${2:?}"
+  local -r item_name="$(item::new::name "${1:?}")"
+  local i_have i_want i_get_more
+  i_have="$(item::inventory::from_name "$item_name")"
+  i_want="${2:?}"
+
+  # Exit early if we can
+  i_get_more=$(( i_want - i_have ))
+  if (( i_have >= i_want )); then
+    log::warn "Tried to procure item when we already have enough | item='$item_name' i_want='$i_want' i_have='$i_have'"
+    return 0
+  fi
+
   local -r procure_method="$(item::procure::method "$item_name")"
   case "$(item::procure::method "$item_name")" in
     farm)
       log::info "Procuring more via farming | item_name='$item_name'"
-      while (( i_get_more > 0 )); do
+      while (( i_have < i_want )); do
         if ! planty "$item_name"; then
           log::err "Failed to plant for procurement | item_name='$item_name'"
           return 1
         fi
-        i_get_more=$(( i_get_more - FARMRPG_PLOTS ))
+        i_have="$(item::inventory::from_name "$item_name")"
       done
       ;;
     craft)
       log::info "Procuring more via crafting | item_name='$item_name'"
-       # TODO turn an item into a recipe and turn the recipe into a multiplier
-       # and ensure have all those items
+      # TODO turn an item into a recipe and turn the recipe into a multiplier
+      # and ensure have all those items
       craft "$item_name" "$i_get_more"
       ;;
     buy)
-      log::info "Procuring more via buying | item_name='$item_name'"
+      log::info "Procuring more via buying | item_name='$item_name' i_get_more='$i_get_more'"
       buy "$item_name" "$i_get_more" ;;
     explore)
       log::info "Procuring more via exploring | item_name='$item_name'"
       # Set up state so we know how many to get
-      local i_have i_want
-      if ! i_have="$(item::inventory::from_name "$item_name")"; then
-        log::err "Not sure how many we have when trying to procure | item_name='$item_name'"
-        return 1
-      fi
-      i_want=$(( i_have + i_get_more))
+      i_have="$(item::inventory::from_name "$item_name")"
       explore --item "$item_name"
 
       # Loop until we have enough
@@ -187,7 +179,7 @@ function item::procure() {
       feed_mill::load "corn" "$mill_corn"
       ;;
     unknown)
-      log::warn "TODO unknown how to procure the item | update ${BASH_SOURCE[0]} | item='$item_name'"
+      log::warn "It is not known how to procure this item. You have to update ${BASH_SOURCE[0]} | item='$item_name'"
       return 1;;
     *)
       log::err "Unknown procure method | item='$item_name' procure_method='$procure_method'"
@@ -201,8 +193,14 @@ function item::procure::method() {
 
   case "$item_name" in
     worms|*_seeds|*_spores) echo "buy" ;;
-    pepper|tomato|potato|corn|mushroom) echo "farm" ;;
-    mushroom_paste) item::ensure_have mushroom 320 && echo "craft" ;;
+    pepper|eggplant|tomato|carrot|pea|cucumber\
+    |radish|onion|hops|potato|leek|watermelon\
+    |corn|cabbage|pumpkin|wheat|gold_pepper\
+    |gold_carrot|gold_pea|gold_cucumber|cotton\
+    |broccoli|gold_eggplant|sunflower|pine|beet\
+    |mega_beet|mega_sunflower|rice|spring\
+    |mega_cotton|mushroom) echo "farm" ;;
+    mushroom_paste) item::ensure_have mushroom 320 && echo "craft" ;; # TODO procure pre-reqs in body of 'craft', NOT in body of 'procure'
     feed) echo "feedmill_corn" ;;
     raptor_egg) echo "explore" ;;
     *) echo "unknown" ;;
