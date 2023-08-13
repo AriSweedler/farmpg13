@@ -1,28 +1,18 @@
 function breakfast_boosted() {
   local plots=$FARMRPG_PLOTS
   (
-  harvest
-  #eat::breakfast_boost
-  local -r PLANT="carrot"
-  local seed
-  if ! seed="$(item::name_to_seed_name "$PLANT")"; then
-    log::err "Failed to find seed | plant='$PLANT'"
+  local plant_obj seed_obj
+  plant_obj="$(item::new::name "carrot")"
+  if ! seed_obj="$(item_obj::seed "$plant_obj")"; then
+    log::err "Failed to convert item_obj to seed | item_obj='$item_obj'"
     return 1
   fi
-  local grown=0
+
+  #eat::breakfast_boost
   while true; do
-    plant "$PLANT" &>/dev/null || buy "$seed" 999
-    sleep 0.01
-    harvest
-    sleep 0.02
-    grown=$(( grown + plots ))
-    log::info "BB helped us grow the plant | grown='$grown' plant='$PLANT'"
-    if (( grown > 600 )); then
-      # _donate "$PLANT" "$grown"
-      sell "$PLANT" "$grown"
-      buy "$seed" "$grown"
-      grown=0
-    fi
+    captain::ensure_have "$PLANT" "$FARMRPG_MAX_INVENTORY"
+    # _donate "$PLANT" "$grown"
+    sell_max "$PLANT" "$grown"
   done) &
 
   # shellcheck disable=SC2064

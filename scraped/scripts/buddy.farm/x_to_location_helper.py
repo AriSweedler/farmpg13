@@ -33,22 +33,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args.url)
-
-
-### # locations=(
-### /l/small-cave/
-### /l/small-spring/
-### /l/highland-hills/
-### /l/cane-pole-ridge/
-### /l/misty-forest/
-### /l/black-rock-canyon/
-### /l/forest/
-### /l/mount-banon/
-### /l/ember-lagoon/
-### /l/whispering-creek/
-### /l/jundland-desert/
-### )
-###
-### for loc in $locations; do
-###   python3 scraped/scripts/explore.py https://buddy.farm/$loc
-### done

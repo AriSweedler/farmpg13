@@ -1,5 +1,4 @@
 __pycache__
 *.log
-output.txt
 .prev_msg
-inventory.json
+output.txt

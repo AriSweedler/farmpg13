@@ -28,7 +28,7 @@ function temple::sacrifice_item() {
 
 function temple::cycle() {
   while (( $(item::inventory::from_name "watermelon") < 900 )); do
-    item::ensure_have watermelon 500
+    captain::ensure_have watermelon 500
     log::info "Donating"
     temple::sacrifice_item "Watermelon"
     temple::sacrifice_item "Yellow Watermelon"

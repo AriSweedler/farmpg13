@@ -2,7 +2,7 @@ function feed_mill::load() {
   # Parse args
   local -r item="${1:?What item to load}"
   local -r amt="${2:?How many corns to load}"
-  if ! item::ensure_have "$item" "$amt"; then
+  if ! captain::ensure_have "$item" "$amt"; then
     log::err "Could not ensure we had enough of the item"
     return 1
   fi

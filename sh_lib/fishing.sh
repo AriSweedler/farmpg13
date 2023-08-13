@@ -38,7 +38,7 @@ function fish::net::one() {
   echo "$output"
 }
 
-function fish::net::all() {
+function fish::net::all::old() {
   local output
   while output="$(fish::net::one "$@")"; do
     # Are any fish at max capacity?
@@ -46,5 +46,37 @@ function fish::net::all() {
       log::info "Some items are at max capacity, selling them"
       sell_cap
     fi
+  done
+}
+
+################################################################################
+
+function fish::sell() {
+  local output
+  if ! output="$(worker "go=sellalluserfish")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  if (( output > 0 )); then
+    log::info "Sold fish for some money | output='$output' num_nets='$num_nets'"
+    return
+  fi
+
+  log::err "Unknown output to selling fish | output='$output'"
+  return 1
+}
+
+function fish::net::all() {
+  local num_nets
+  if ! num_nets="$(item::inventory::from_name "large_net")"; then
+    log::err "Failed to find number of large nets | num_nets='$num_nets'"
+    return 1
+  fi
+  log::info "We are going to use all our remaining large num_nets | num_nets='$num_nets'"
+
+  while (( num_nets > 0 )); do
+    fish::net::one "pirate's_cove" >/dev/null
+    (( --num_nets % 5 == 0 )) && fish::sell
   done
 }

@@ -70,11 +70,11 @@ function gm::rest_farmhouse() {
 }
 
 function gm::use_grape_juice() {
-  local -r plant="rice"
-  local -r seed="$(item::name_to_seed_name "$plant")"
+  local -r plant_obj="$(item::new::name "rice")"
+  local -r seed_obj="$(item_obj::seed "$plant_obj")"
   local -r qty=$((2*FARMRPG_PLOTS))
-  if ! item::ensure_have "$seed" "$qty"; then
-    log::err "Could not ensure that we have enough seeds for grapejuice boost | seed='$seed' qty='$qty'"
+  if ! captain::ensure_have "$seed_obj" "$qty"; then
+    log::err "Could not ensure that we have enough seeds for grapejuice boost | seed_obj='$seed_obj' qty='$qty'"
     return 1
   fi
   harvest
@@ -84,7 +84,7 @@ function gm::use_grape_juice() {
   (set -e
   while (( gj_uses > 0 )); do
     plant "$plant"
-    farm::use_grapejuice
+    drink::grape_juice
     harvest
     ((gj_uses--))
   done)
@@ -100,10 +100,7 @@ function gm::spinwheel() {
   log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
 }
 
-function gm::items() {
-  # Pets
-  collect_pet_items
-
+function gm::orchard() {
   # Craft for the orchard
   craft_max "glass_orb"
   craft_max "glass_bottle"
@@ -111,21 +108,33 @@ function gm::items() {
   craft_max "orange_juice"
   craft_max "lemonade"
   craft_max "arnold_palmer"
-  #craft "grape_juice" 2
+  craft_max "grape_juice"
   craft_max "wine"
+}
 
-  # Craft all the random objects and sell the proper ones
-  craft_max "twine"
-  craft_max "iron_ring"
-
-  # gm::items::money
+function gm::items() {
+  # Pets
+  collect_pet_items
 
   craft_max "twine"
   craft_max "iron_ring"
   craft_max "cooking_pot"
+  craft_max "white_parchment"
+  craft_max "toilet_paper"
+  craft_max "inferno_sphere"
+  craft_max "lava_sphere"
+  craft_max "red_dye"
+  craft_max "red_shield"
+  sell_max "red_shield"
 
   # Place wine in the cellar
   # gm::wine
+}
+
+function gm::explore() {
+  # Use OJ and then apple cider at locations
+  # Eat an onion soup
+  :
 }
 
 function gm::items::money() {
@@ -166,6 +175,8 @@ function gm::raptors() {
 }
 
 function gm::wishing_well() {
+  # TODO build safeguard to not spend gold
+
   # Parse args
   if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
@@ -184,6 +195,16 @@ function gm::wishing_well() {
   esac
 }
 
+function gm::fishing() {
+  craft_max "twine"
+  craft_max "rope"
+  craft_max "fishing_net"
+  craft_max "large_net"
+  craft_max "iron_ring"
+  craft_max "twine"
+  craft_max "rope"
+}
+
 function goodmorning() {
   # Farm stuff
   gm::pet_chickens
@@ -194,8 +215,11 @@ function goodmorning() {
   gm::rest_farmhouse
   #gm::use_grape_juice
 
-  # Crafting
+  # Use and replenish items
+  gm::orchard
   gm::items
+  gm::fishing
+  gm::explore
 
   # Town stuff
   gm::spinwheel

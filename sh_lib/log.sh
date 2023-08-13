@@ -16,7 +16,7 @@ function log::debug() {
 }
 
 function log::dev() {
-  log::_impl --level "dev" -- "[DEVELOPMENT] " "$@"
+  log::_impl --level "dev" -- "[DEVELOPMENT]" "$@"
 }
 
 # shellcheck disable=SC2028

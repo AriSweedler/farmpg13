@@ -17,7 +17,7 @@ function buy() {
 
   if (( output < quantity )) && (( output >= 0 )); then
     local -r max_amount="$output"
-    log::dev "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
+    log::debug "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
     buy "$1" "$max_amount"
   else
     log::warn "Unknown output to buy | output='$output'"

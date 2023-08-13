@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Reloads all the values in a X_to_location file:
+#
+# ./scraped/item_to_location.json
+# ./scraped/fish_to_location.json
+#
+# Well,,, really just places it in stdout. You have to reload it yourself
+
+function log() {
+  echo "$@" >&2
+}
+
+# Written by ChatGPT. The query was:
+#
+#     pull all the hrefs out of a page that contain the string '/l/'
+#
+function filter_in::location_links() {
+  grep -oE "href=[\"'][^\"']*\/l\/[^\"']*" | sed -E 's/href="//'
+}
+
+function main() {
+  # Parse args
+  local buddy_path
+  while (( $# > 0 )); do
+    case "$1" in
+      fish) buddy_path=fishing; shift ;;
+      item) buddy_path=exploring; shift ;;
+      *) log "ERROR:: Unknown argument in ${FUNCNAME[0]}: '$1'"; exit 1 ;;
+    esac
+  done
+
+  # Validate args
+  if [ -z "$buddy_path" ]; then
+    log "ERROR:: Need to know what to scrape. Options: 'fish' or 'item'"
+    return 1
+  fi
+
+  # Validate globals
+  python_script="$0_helper.py"
+  if ! [ -f "$python_script" ]; then
+    log "ERROR:: Could not find python script | python_script='$python_script'"
+    return 1
+  fi
+
+  local url="https://buddy.farm/$buddy_path/"
+  read -ra locations <<< "$(curl -s "$url" | filter_in::location_links | tr '\n' ' ')"
+  log "INFO:: We have ${#locations[@]} locations:"
+
+  # Start and end with a newline so `{` movements will get us to the start
+  echo
+  trap "echo" RETURN
+  for loc in "${locations[@]}"; do
+    url="https://buddy.farm$loc"
+    python3 "$python_script" "$url" | tr '-' '_'
+  done
+}
+main "$@"

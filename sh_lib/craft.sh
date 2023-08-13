@@ -34,6 +34,7 @@ function craft_max() {
   local -r item="${1:?}"
   local item_nr
   item_nr="$(item_obj::num "$item")"
+  log::info "Trying to craft | item='$item/$item_nr'"
 
   # Fetch recipe
   local -r recipe="$(jq -c -r '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"

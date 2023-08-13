@@ -16,8 +16,10 @@ function worker() {
     echo "$ans"
   }
   local -r base="https://farmrpg.com/worker.php"
-  local -r url="${base}$(_build_url_query_params "$@")"
+  local -r action="$1"
+  local -r query_params="$(_build_url_query_params "$@")"
   shift $#
+  local -r url="${base}${query_params}"
 
   log::debug "About to send req to farmrpg | url='$url'"
   local -r output="$(\
@@ -56,9 +58,55 @@ function worker() {
   fi
   log::debug "Sent req | output='$(log::field "$output")'"
 
-  if (( rc != 0 )); then
-    log::err "Failed to brotli decode the output | url='$url' "
-    #return 1
-  fi
+  worker::handle_inventory_cache "$action"
   echo "$output"
+}
+
+function worker::action::is_mutating() {
+  local -r action="${1:?}"
+  case "$action" in
+
+    buyitem |\
+    castnet |\
+    collectallmailitems |\
+    collectallpetitems |\
+    cookitem |\
+    cookready |\
+    craftitem |\
+    donatecomm |\
+    drinkgj |\
+    drinkojs |\
+    feedallpigs |\
+    givemailitem |\
+    harvestall |\
+    loadfeedmill |\
+    plantall |\
+    sacrificeitem |\
+    sellalluserfish |\
+    sellitem |\
+    spinfirst |\
+    storewine |\
+    tossmanyintowell |\
+    usemultitem) return 0 ;;
+
+    incuallraptors |\
+    petallchickens |\
+    petallcows |\
+    rest |\
+    seasonmeal |\
+    setfarmseedcounts |\
+    stirmeal |\
+    tastemeal |\
+    trycrackcode |\
+    work) return 1 ;;
+
+    *) log::warn "Unknown action, cannot determine if we should update the inventory cache or not | action='$action'"
+  esac
+}
+
+function worker::handle_inventory_cache() {
+  local -r action="${1#go=}"
+  if worker::action::is_mutating "$action"; then
+    inventory::clear_cache
+  fi
 }

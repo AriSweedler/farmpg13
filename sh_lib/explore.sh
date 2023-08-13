@@ -11,8 +11,13 @@ function explore::one() {
         shift 2
         log::debug "Dereferenced item into explore location | item='$item' loc='$loc'"
         ;;
+      --apple_cider)
+        local drink_cider="true"
+        shift
+        ;;
       --loc)
-        explore_loc_num="$(item::location_to_num "$2")"
+        loc="$2"
+        explore_loc_num="$(item::location_to_num "$loc")"
         shift 2
         ;;
       [0-9][0-9])
@@ -23,7 +28,13 @@ function explore::one() {
     esac
   done
 
-  if ! output="$(worker "go=explore" "id=${explore_loc_num}")"; then
+  # Also add cider
+  args=("go=explore" "id=${explore_loc_num}")
+  if [ "$drink_cider" == "true" ]; then
+    args=( "${args[@]}" "cider=1" )
+  fi
+
+  if ! output="$(worker "${args[@]}")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -56,10 +67,4 @@ function rapid_explore() {
       done
     fi
   done
-}
-
-function agent::xp::explore() {
-  explore --loc whispering_creek
-  item::ensure_have "mushroom_paste" "120"
-  craft_max "sturdy_bow"
 }

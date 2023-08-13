@@ -1,28 +1,36 @@
-function set_farmseed() {
-  local item seed_name seed_nr
-  item="${1:?}"
-  if ! seed_name="$(item::name_to_seed_name "$item")"; then
-    log::err "Failed to convert item name to seed_num | item='$item'"
+function farm::set_seed() {
+  # Parse args
+  local item_obj
+  if ! item_obj="$(item::new::name "$1")"; then
+    log::err "Argument was not an item name"
     return 1
   fi
 
-  if ! seed_nr="$(item_obj::num "$seed_name")"; then
-    log::err "Failed to convert seed name to seed nr | seed_name='$seed_name'"
+  # Get the corresponding seed from the plant
+  local seed_obj
+  if ! seed_obj="$(item_obj::seed "$item_obj")"; then
+    log::err "Failed to convert item_obj to seed | item_obj='$item_obj'"
     return 1
   fi
 
-  # Deal with output
+  # Dereference the seed into its ID
+  local seed_nr
+  if ! seed_nr="$(item_obj::num "$seed_obj")"; then
+    log::err "Failed to convert seed name to seed nr | seed_obj='$seed_obj'"
+    return 1
+  fi
+
+  # Do work
   if ! output="$(worker "go=setfarmseedcounts" "id=$seed_nr")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
-  log::debug "We tried to set farm seed counts | output='$output'"
-  if [ "$output" == $'3' ] || [ "$output" == "" ]; then
-    # TODO promote this to INFO instead of DEBUG if this is the invoking action
-    log::debug "Set farm seed successfully"
-  else
-    log::warn "Unknown output to setting farm seed | output='$output'"
-  fi
+
+  # Deal with output
+  case "$output" in
+    "") log::debug "Set farm seed successfully" ; return 0;;
+    *) log::warn "Unknown output to setting farm seed | output='$output'" ; return 1 ;;
+  esac
 }
 
 function harvest() {
@@ -40,48 +48,17 @@ function harvest() {
   esac
 }
 
-function _normalize_planted() {
-  # Exit early if no args
-  (( $# == 0 )) && return 1
-
-  # lowercase
-  output="$(tr '[:upper:]' '[:lower:]' <<< "$1")"
-
-  # Strip unneeded trailing s
-  if [[ "${output: -1}" == "s" ]]; then
-    output="${output:0:${#output}-1}"
-  fi
-
-  # There's a crop to normalize
-  if (( ${#output} > 1 )); then
-    case "$output" in
-      hop) echo "hops" ;;
-      potatoe) echo "potato" ;;
-      tomatoe) echo "tomato" ;;
-      *) echo "$output" ;;
-    esac
-    return
-  fi
-
-  set -x
-  [ "$*" == "DEBUG IN TRACE" ] && true
-  set +x
-  log::err "Unable to normalize | func='${FUNCNAME[0]}' arg='$1'"
-  return 1
-}
-
 function plant() {
-  local -r item="${1:?}"
+  local item_name="${1:?}"
 
   # Set up state
-  if ! set_farmseed "$item"; then
-    log::err "Failed to set farm seed | item='$item'"
+  if ! farm::set_seed "$item_name"; then
+    log::err "Failed to set farm seed | item_name='$item_name'"
     return 1
   fi
 
   # Do work
-  local output item_response grow_time
-  log::debug "About to send plantall req"
+  local output planted_item grow_time
   if ! output="$(worker "go=plantall" "id=280551")"; then
     log::err "Failed to invoke worker"
     return 1
@@ -94,81 +71,22 @@ function plant() {
   esac
 
   # Parse and then normalize the item
-  IFS="|" read -r item_response grow_time <<< "$output"
-  if ! nitem="$(_normalize_planted "$item_response")" ; then
-    log::err "Failed to normalize item in response | output='$output' item_response='$item_response'"
-    return 1
+  IFS="|" read -r planted_item grow_time <<< "$output"
+  if ! planted_obj="$(item::new::planted "$planted_item")" ; then
+    log::warn "Failed to construct item_object from planted_item | output='$output' planted_item='$planted_item'"
   fi
 
   # Validate response
-  case "$nitem" in
-  "$item")
-    log::info "Planted all successfully | plant='$nitem' grow_time='$grow_time'"
-    echo $(( grow_time + 1 ))
-    return 0
-    ;;
-  ya_hay_plants)
-    log::err "There are already plants growing in your farm - we cannot plant more | output='$output'"
+  if ! item_obj::is_crop "$planted_obj"; then
+    log::warn "Unknown response to plant req | output='$output' planted_item='$planted_item'"
     return 1
-    ;;
-  no_seeds)
-    log::err "You do not have any seeds | output='$output' plant='$item'"
-    return 1
-    ;;
-  none)
-    log::err "Failed to plant all - we planted none | item='$item' nitem='$nitem' output='$output'"
-    return 1
-    ;;
-  *)
-    log::warn "Unknown response to plant req | output='$output' nitem='$nitem' item='$item'"
-    return 1
-    ;;
-  esac
+  fi
+
+  log::info "Planted all successfully | plant='$planted_obj' grow_time='$grow_time'"
+  echo $(( grow_time + 1 ))
 }
 
-function planty() {
-  local -r plant="${1:?}"
-  harvest
-
-  seed="$(item::name_to_seed_name "$plant")"
-  if ! item::ensure_have "$seed" "$FARMRPG_PLOTS"; then
-    log::err "Could not ensure that we have enough seeds | seed='$seed' want_to_have='$FARMRPG_PLOTS'"
-    return 1
-  fi
-
-  # Wait for prev plant, then replant
-  local rc grow_time
-  grow_time="$(plant "$plant")"
-  rc=$?
-  while (( rc != 0 )); do
-    if (( rc != 40 )); then
-      log::err "Failed to plant | plant='$plant' rc=$rc"
-      return 1
-    fi
-    seconds="$(time_until_farm_ready)"
-    log::warn "Waiting for current plants to grow... | plant='$plant' seconds='$seconds'"
-    sleep "$seconds"
-    harvest
-    grow_time="$(plant "$plant")"
-    rc=$?
-  done
-
-  if [ -z "$grow_time" ]; then
-    log::err "No one set 'grow_time' for us"
-    return 1
-  fi
-
-  sleep "$grow_time"
-  log::debug "We are done sleeping"
-  harvest
-
-  if [ "$plant" == "potato" ]; then
-    log::warn "YOU ARE SO GENEROUS"
-    temple::sacrifice_item "Potato"
-    temple::sacrifice_item "Hot Potato"
-    log::warn "DONATIONS BUENO"
-  fi
-}
+################################################################################
 
 function time_until_farm_ready() {
   # Measure
@@ -199,15 +117,11 @@ function time_until_farm_ready() {
   echo "$ans"
 }
 
-function farm::use_grapejuice() {
-  local output
-  if ! output="$(worker "go=drinkgj" "id=280551")"; then
-    log::err "Failed to invoke worker"
-    return 1
-  fi
-
-  case "$output" in
-    success) log::info "Successfully drank grape juice" ;;
-    *) log::err "Failed to drink grape juice" ; return 1 ;;
-  esac
+function bs4_helper::panel_crops::ready_percent() {
+  python3 -c "from bs4 import BeautifulSoup
+import sys
+soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
+ans = soup.find('span', class_='c-progress-bar-fill pb11')['style'].split(':')[1].strip('%;')
+print(ans)
+  "
 }

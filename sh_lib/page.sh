@@ -40,19 +40,16 @@ function farmpg13::page() {
   echo "$output"
 }
 
-function inventory() {
-  farmpg13::page "inventory.php" | python3 "./scraped/scripts/inventory.py"
-}
-
+# Get the page for the panel of crops that we are currently growing.
 function page::panel_crops() {
   farmpg13::page "panel_crops.php?cachebuster=380824"
 }
 
-function bs4_helper::panel_crops::ready_percent() {
-  python3 -c "from bs4 import BeautifulSoup
-import sys
-soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
-ans = soup.find('span', class_='c-progress-bar-fill pb11')['style'].split(':')[1].strip('%;')
-print(ans)
-  "
+# Used to get the:
+# * recipe when piped to 'scraped/scripts/recipe.py'
+# * name when piped to 'scraped/scripts/item.sh'
+function page::item() {
+  local -r item_id="${1:?Item id}"
+  log::info "Getting page for item | item_id='$item_id'"
+  farmpg13::page "item.php?id=$item_id"
 }

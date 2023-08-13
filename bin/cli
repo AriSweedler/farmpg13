@@ -9,9 +9,9 @@ function main() {
   while (( $# > 0 )); do
     case "$1" in
       buy | sell | sell_cap | sell_max \
-      | planty | plant | harvest | time_until_farm_ready \
+      | plant | harvest | time_until_farm_ready \
       | craft | craft_max \
-      | item::ensure_have | item_obj::num \
+      | captain::ensure_have | item_obj::num \
       | collect_mail \
       | explore \
       | camp_mailbox | rapid_explore | breakfast_boosted \
@@ -22,7 +22,11 @@ function main() {
       | fish::net::one | fish::net::all \
       | goodmorning | gm::items | gm::wine | gm::spinwheel | gm::vault \
       | temple::sacrifice_item | temple::cycle \
-      ) "$1" "${@:2}"; return ;;
+      | * \
+      )
+        "$1" "${@:2}"
+        return $?
+        ;;
       *) log::err "Unknown argument | func='${FUNCNAME[0]}' arg='$1'" >&2; return 1 ;;
     esac
   done
