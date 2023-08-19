@@ -20,7 +20,7 @@ function buy() {
     log::debug "You tried to buy too many. We will just purchase up to the max amount | max_amount='$max_amount'"
     buy "$1" "$max_amount"
   else
-    log::warn "Unknown output to buy | output='$output'"
+    log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
     return 1
   fi
 }
@@ -50,7 +50,7 @@ function sell() {
     log::err "Failed to sell | output='$output'"
     return 1
   else
-    log::warn "Unknown output to sell | output='$output'"
+    log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
     return 1
   fi
 }

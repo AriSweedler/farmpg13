@@ -64,7 +64,7 @@ function cook::collect() {
   case "$output" in
     success) log::info "Collected a meal | oven_nr='$oven_nr'" ;;
     notready) log::err "Meal is not ready!" ; return 1 ;;
-    *) log::err "Unknown output to worker | output='$output'" ; return 1 ;;
+    *) log::err "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 

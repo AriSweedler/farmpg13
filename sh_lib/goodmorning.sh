@@ -52,8 +52,7 @@ function gm::work_storehouse() {
     *) log::err "Failed to work in the storehouse" ; return 1 ;;
   esac
 
-  # Use all that extra stamina
-  # explore --item glass_orb
+  inventory::update_max_inventory
 }
 
 function gm::rest_farmhouse() {
@@ -70,7 +69,7 @@ function gm::rest_farmhouse() {
 }
 
 function gm::use_grape_juice() {
-  local -r plant_obj="$(item::new::name "rice")"
+  local -r plant_obj="$(item::new::name "beet")"
   local -r seed_obj="$(item_obj::seed "$plant_obj")"
   local -r qty=$((2*FARMRPG_PLOTS))
   if ! captain::ensure_have "$seed_obj" "$qty"; then
@@ -80,10 +79,10 @@ function gm::use_grape_juice() {
   harvest
 
   local gj_uses=2
-  log::info "Using grapejuice on plant | plant='$plant' gj_uses='$gj_uses'"
+  log::info "Using grapejuice on plant | plant='$plant_obj' seed='$seed_obj' gj_uses='$gj_uses'"
   (set -e
   while (( gj_uses > 0 )); do
-    plant "$plant"
+    plant "$plant_obj"
     drink::grape_juice
     harvest
     ((gj_uses--))
@@ -150,7 +149,7 @@ function gm::items::money() {
 
 function gm::wine() {
   craft_max "wine"
-  if ! wine_i_have="$(item::inventory::from_name "wine")"; then
+  if ! wine_i_have="$(item_obj::inventory "wine")"; then
     log::err "Failed to read how much win we have"
     return 1
   fi
@@ -223,7 +222,7 @@ function goodmorning() {
 
   # Town stuff
   gm::spinwheel
-  gm::wishing_well "bacon"
+  gm::wishing_well "salt" # spiked_shell
   #vault::crack
   
   # Friendship

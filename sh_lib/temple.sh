@@ -8,7 +8,7 @@ function temple::sacrifice_item() {
     return 1
   fi
 
-  if ! amt="$(item::inventory::from_name "$item_obj")"; then
+  if ! amt="$(item_obj::inventory "$item_obj")"; then
     log::err "Could not figure out how much to sacrifice"
     return 1
   fi
@@ -22,12 +22,12 @@ function temple::sacrifice_item() {
   case "$output" in
     success) log::info "Sacrificed successfully | sac_item='$sac_item' amt='$amt'" ;;
     "") log::err "Failed to sacrifice" ; return 1;;
-    *) log::warn "Unknown output to 'sacrifice_item' | output='$output'" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 
 function temple::cycle() {
-  while (( $(item::inventory::from_name "watermelon") < 900 )); do
+  while (( $(item_obj::inventory "watermelon") < 900 )); do
     captain::ensure_have watermelon 500
     log::info "Donating"
     temple::sacrifice_item "Watermelon"

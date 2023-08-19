@@ -4,12 +4,12 @@ function explore::one() {
     local explore_loc_num
     case "$1" in
       --item)
-        local loc item
-        item="${2:?}"
-        loc="$(item::name_to_location "$item")"
-        explore_loc_num="$(item::location_to_num "$loc")"
+        local loc item_obj
+        item_obj="$(item::new::name "$2")"
+        loc="$(item_obj::explore_location "$item_obj")"
+        explore_loc_num="$(explore::loc_to_num "$loc")"
         shift 2
-        log::debug "Dereferenced item into explore location | item='$item' loc='$loc'"
+        log::debug "Dereferenced item into explore location | item_obj='$item_obj' loc='$loc'"
         ;;
       --apple_cider)
         local drink_cider="true"
@@ -17,7 +17,7 @@ function explore::one() {
         ;;
       --loc)
         loc="$2"
-        explore_loc_num="$(item::location_to_num "$loc")"
+        explore_loc_num="$(explore::loc_to_num "$loc")"
         shift 2
         ;;
       [0-9][0-9])
@@ -41,7 +41,7 @@ function explore::one() {
   local remaining_stamina
   remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output")"
   log::debug "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
-  log::info "Explored successfully | loc='$loc'"
+  log::info "Explored successfully | loc='$loc' args='${args[*]}'"
 
   echo "$remaining_stamina"
 }
@@ -67,4 +67,16 @@ function rapid_explore() {
       done
     fi
   done
+}
+
+function explore::loc_to_num() {
+  local -r loc="${1:?}"
+  local -r num="$(jq -r '.["'"$loc"'"]' "./scraped/location_to_number.json")"
+  if [ "$num" == "null" ]; then
+    log::err "Could not turn location into a number | num='$num'"
+    printf "0"
+    return 1
+  fi
+
+  printf "%s" "$num"
 }

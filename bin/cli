@@ -24,6 +24,7 @@ function main() {
       | temple::sacrifice_item | temple::cycle \
       | * \
       )
+        export FARMRPG_ARGS="$*"
         "$1" "${@:2}"
         return $?
         ;;

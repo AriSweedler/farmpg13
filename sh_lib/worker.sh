@@ -66,6 +66,7 @@ function worker::action::is_mutating() {
   local -r action="${1:?}"
   case "$action" in
 
+    # Mutating
     buyitem |\
     castnet |\
     collectallmailitems |\
@@ -76,11 +77,13 @@ function worker::action::is_mutating() {
     donatecomm |\
     drinkgj |\
     drinkojs |\
+    explore |\
     feedallpigs |\
     givemailitem |\
     harvestall |\
     loadfeedmill |\
     plantall |\
+    playallcw |\
     sacrificeitem |\
     sellalluserfish |\
     sellitem |\
@@ -89,9 +92,12 @@ function worker::action::is_mutating() {
     tossmanyintowell |\
     usemultitem) return 0 ;;
 
+    # NOT mutating
+    addcwitem |\
     incuallraptors |\
     petallchickens |\
     petallcows |\
+    removeallcw |\
     rest |\
     seasonmeal |\
     setfarmseedcounts |\

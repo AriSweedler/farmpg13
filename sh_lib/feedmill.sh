@@ -32,6 +32,6 @@ function feed_mill::load() {
   case "$output" in
     success) log::info "Loaded feed mill successfully" ;;
     "") log::err "Failed to load feed mill" ; return 1;;
-    *) log::warn "Unknown output to 'load_feed_mill' | output='$output'" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }

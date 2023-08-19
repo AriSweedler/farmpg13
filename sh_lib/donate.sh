@@ -20,7 +20,7 @@ function _donate() {
     log::err "You do not have enough items to donate | output='$output'"
     return 1
   else
-    log::warn "Unknown output to donate | output='$output'"
+    log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
     return 1
   fi
 }

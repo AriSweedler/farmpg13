@@ -21,7 +21,7 @@ function eat() {
 
   case "$output" in
     success) log::info "Ate a meal | item_name='$item_name'" ;;
-    *) log::err "Unknown output to eat meal | output='$output'" ; return 1 ;;
+    *) log::err "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 

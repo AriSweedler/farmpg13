@@ -98,24 +98,46 @@ function item_obj::name() {
 }
 
 function item_obj::seed() {
-  local -r item_name="$(echo "${1:?}" | tr '[:upper:]-' '[:lower:]_')"
-  case "$item_name" in
-    mushroom) echo "mushroom_spores" ;;
-    peas) echo "pea_seeds" ;;
-    gold_peas) echo "gold_pea_seeds" ;;
-    pepper|eggplant|tomato|carrot|cucumber\
-    |radish|onion|hops|potato|leek|watermelon\
-    |corn|cabbage|pumpkin|wheat|gold_pepper\
-    |gold_carrot|gold_cucumber|cotton\
-    |broccoli|gold_eggplant|sunflower|pine|beet\
-    |mega_beet|mega_sunflower|rice|spring\
-    |mega_cotton) echo "${item_name}_seeds" ;;
-    *) log::err "Unknown item - cannot convert to seeds | item_name='$item_name'"; return 1 ;;
+  local ans item_obj
+  item_obj="${1:?}"
+
+  # Special case the weird ones
+  case "$item_obj" in
+    mushroom) ans="mushroom_spores" ;;
+    peas) ans="pea_seeds" ;;
+    gold_peas) ans="gold_pea_seeds" ;;
   esac
+  if [ -n "$ans" ]; then
+    echo "$ans"
+    return
+  fi
+  
+  # All the remaining crops
+  if is_in_array "$item_obj" $(_echo_short_crops) $(_echo_long_crops) $(_echo_mega_crops) $(_echo_gold_crops); then
+    echo "${item_obj}_seeds"
+    return
+  fi
+
+  log::err "Unknown item - cannot convert to seeds | item_obj='$item_obj'"
+  return 1
+}
+
+function has_gj_uses_left() {
+  log::debug "Do we have gj uses left"
+  page::panel_crops | grep -q 'Grape Juice'
+  rc=$?
+  if (( rc == 0 )); then
+    log::debug "Answer is yes"
+  else
+    log::debug "Answer is no"
+  fi
+  return $rc
 }
 
 # Dereference an item into a method to procure it
 function item_obj::procure_method() {
+  local item_obj="${1:?}"
+
   if item_obj::is_buyable "$item_obj"; then
     echo "buy"
     return
@@ -126,7 +148,34 @@ function item_obj::procure_method() {
     return
   fi
 
+  if item_obj::is_crop "$item_obj"; then
+    if item_obj::is_crop::short "$item_obj"; then
+      echo "farm"
+      return
+    fi
+
+    if item_obj::is_crop::mega "$item_obj"; then
+      echo "farm_mega"
+      return
+    fi
+
+    if item_obj::is_crop::long "$item_obj"; then
+      if has_gj_uses_left; then
+        echo "farm_gj"
+        return
+      fi
+      log::warn "We want more of a long crop, but we are out of grape juice for the day. Wait until tomorrow"
+      echo "patience"
+      return
+    fi
+
+    log::err "This is neither a short crop nor a long crop. Is it golden? | item_obj='$item_obj'"
+    echo "unknown"
+    return 1
+  fi
+
   if item_obj::is_explorable "$item_obj"; then
+    # TODO what items do we wanna explore_cider for?
     echo "explore"
     return
   fi
@@ -136,15 +185,60 @@ function item_obj::procure_method() {
     return
   fi
 
-  if item_obj::is_crop "$item_obj"; then
-    echo "farm"
-    return
-  fi
-
   echo "unknown"
   return 1
 }
 
+function item_obj::recipe() {
+  local item_obj item_nr
+  item_obj="${1:?}"
+  if ! item_nr="$(item_obj::num "$item_obj")"; then
+    log::err "Failed to get item number for crafting recipe | item_obj='$item_obj'"
+    return 1
+  fi
+
+  if ! jq --exit-status --compact-output --raw-output '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json"; then
+    log::err "Failed to find recipe for item | item='$item_obj/$item_nr'"
+    return 1
+  fi
+}
+
+function item_obj::inventory() {
+  local -r item_obj="$(item::new::name "${1:?Give an item name to find inventory for}")"
+
+  local item_nr
+  if ! item_nr="$(item_obj::num "$item_obj")"; then
+    log::err "Failed to get number for item | item='$item_obj'"
+    return 1
+  fi
+
+  local ans
+  if ! ans="$(jq -r '.["'"$item_nr"'"]' <<< "$(inventory)")"; then
+    log::err "Could not read how many items were in inventory | item_obj='$item_obj' item_nr='$item_nr'"
+    return 1
+  fi
+
+  if [ "$ans" == "null" ]; then
+    log::debug "There is no key in inventory - answering '0' | key='$item_nr' item_obj='$item_obj'"
+    printf "0"
+    return 0
+  fi
+
+  # Return success
+  echo "$ans"
+}
+
+function item_obj::explore_location {
+  local item_obj="${1:?}"
+  local -r loc="$(jq -r '.["'"$item_obj"'"]' "./scraped/item_to_location.json")"
+  if [ "$loc" == "null" ]; then
+    log::err "Could not turn item into a location | loc='$loc' item_obj='$item_obj'"
+    printf "0"
+    return 1
+  fi
+
+  printf "%s" "$loc"
+}
 ################################################################################
 ################################ classification ################################
 ################################################################################
@@ -173,20 +267,33 @@ function item_obj::is_buyable() {
     *) return 1 ;;
   esac
 }
-
+################################################################################
+############################## crop classification #############################
+################################################################################
 function item_obj::is_crop() {
-  local crops=( $(_echo_crops) )
-  for crop in "${crops[@]}"; do
-    if [ "$item_obj" == "$crop" ]; then
-      # Return success
-      return 0
-    fi
-  done
-
-  # Return failure
-  return 1
+  local item_obj="${1:?}"
+  is_in_array "$item_obj" $(_echo_short_crops) $(_echo_long_crops) $(_echo_mega_crops) $(_echo_gold_crops)
 }
 
+function item_obj::is_crop::short() {
+  local item_obj="${1:?}"
+  is_in_array "$item_obj" $(_echo_short_crops)
+}
+
+function item_obj::is_crop::long() {
+  local item_obj="${1:?}"
+  is_in_array "$item_obj" $(_echo_long_crops)
+}
+
+function item_obj::is_crop::gold() {
+  local item_obj="${1:?}"
+  is_in_array "$item_obj" $(_echo_gold_crops)
+}
+
+function item_obj::is_crop::mega() {
+  local item_obj="${1:?}"
+  is_in_array "$item_obj" $(_echo_mega_crops)
+}
 ################################################################################
 ############################### private functions ##############################
 ################################################################################
@@ -202,7 +309,7 @@ function _is_key_in_json_file() {
   jq --arg key "$key" --exit-status '.[$key]' "$json_file" &> /dev/null
 }
 
-function _echo_crops() {
+function _echo_short_crops() {
   local crops=(
     pepper
     carrot
@@ -210,6 +317,7 @@ function _echo_crops() {
     cucumber
     eggplant
     radish
+    mushroom
     onion
     hops
     potato
@@ -220,15 +328,49 @@ function _echo_crops() {
     cabbage
     pine
     pumpkin
-    wheat
-    mushroom
-    # broccoli
-    # cotton
-    # sunflower
-    # beet
-    # rice
   )
   for c in "${crops[@]}"; do
     echo "$c"
   done
 }
+
+function _echo_long_crops() {
+  local crops=(
+    wheat
+    broccoli
+    cotton
+    sunflower
+    beet
+    rice
+  )
+  for c in "${crops[@]}"; do
+    echo "$c"
+  done
+}
+
+function _echo_mega_crops() {
+  local crops=(
+    mega_beet
+    mega_sunflower
+    mega_cotton
+  )
+  for c in "${crops[@]}"; do
+    echo "$c"
+  done
+}
+
+function _echo_gold_crops() {
+  local crops=(
+    gold_pepper
+    gold_carrot
+    gold_cucumber
+    gold_eggplant
+  )
+  for c in "${crops[@]}"; do
+    echo "$c"
+  done
+}
+################################################################################
+########################### Monkey patched functions ###########################
+################################################################################
+# function item_obj::craftworks::add() {

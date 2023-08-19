@@ -17,7 +17,7 @@ function collect_mail() {
   if [ "$output" == "success" ]; then
     log::info "Successfully collected items"
   else
-    log::warn "Unknown output to 'collectallmailitems' | output='$output'"
+    log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
     return 1
   fi
 }

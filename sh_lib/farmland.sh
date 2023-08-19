@@ -29,7 +29,7 @@ function farm::set_seed() {
   # Deal with output
   case "$output" in
     "") log::debug "Set farm seed successfully" ; return 0;;
-    *) log::warn "Unknown output to setting farm seed | output='$output'" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 
@@ -44,7 +44,7 @@ function harvest() {
   case "$output" in
     success) log::info "Harvested all successfully" ;;
     "") log::err "Failed to harvest all | output='$output'" ; return 1;;
-    *) log::warn "Unknown output to harvest | output='$output'" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 
@@ -78,7 +78,7 @@ function plant() {
 
   # Validate response
   if ! item_obj::is_crop "$planted_obj"; then
-    log::warn "Unknown response to plant req | output='$output' planted_item='$planted_item'"
+    log::warn "Item is not considered a crop | output='$output' planted_item='$planted_item'"
     return 1
   fi
 

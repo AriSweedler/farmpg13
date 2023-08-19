@@ -1,32 +1,41 @@
 function craft() {
-  # Parse args
-  local -r item_name="${1:?}"
-  if ! item_nr="$(item_obj::num "$item_name")"; then
+  local item_obj item_nr
+  function craft::logCtx() {
+    [ -n "$qty" ] && echo -n "qty='$qty' "
+    [ -n "$adjusted_qty" ] && echo -n "adjusted_qty='$adjusted_qty' "
+    echo -n "item='$item_obj/$item_nr'"
+  }
+
+  # Parse item arg
+  item_obj="$(item::new::name "$1")"
+  if ! item_nr="$(item_obj::num "$item_obj")"; then
     log::err "Failed to get item ID"
     return 1
   fi
-  local quantity="${2:?How many to craft}"
-  # quantity=$(python -c "import math; print(math.ceil($quantity / $FARMRPG_CRAFTING_BOOST))")
-  if (( quantity == 0 )); then
+
+  # Parse and massage qty arg
+  local qty adjusted_qty
+  qty="${2:?How many to craft}"
+  if (( qty == 0 )); then
     log::err "You must craft at least 1 item"
     return 1
   fi
-  log::debug "Crafting 80% of desired output because of perks | quantity='$2' adjusted='$quantity' item_name='$item_name'"
+  adjusted_qty=$(python -c "import math; print(math.ceil($qty / $FARMRPG_CRAFTING_BOOST))")
+  log::debug "Asking to craft less than desired output because of perks | $(craft::logCtx)"
 
   # Do work
   local output
-  if ! output="$(worker "go=craftitem" "id=${item_nr}" "qty=${quantity}")"; then
+  if ! output="$(worker "go=craftitem" "id=${item_nr}" "qty=${adjusted_qty}")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
 
   # Validate output
-  local -r item="$item_name/$item_nr"
   case "$output" in
-    success) log::info "Successfully crafted | item='$item' quantity='$quantity'" ;;
-    cannotafford) log::err "Missing a resource necessary to craft this | item='$item'" ; return 1 ;;
-    "") log::warn "Output to craft attempt is empty | item='$item' quantity='$quantity'" ; return 1 ;;
-    *) log::warn "Unknown output to craft | output='$output'" ; return 1 ;;
+    success) log::info "Successfully crafted | $(craft::logCtx)" ;;
+    cannotafford) log::err "Missing a resource necessary to craft this | $(craft::logCtx)" ; return 1 ;;
+    "") log::warn "Output to craft attempt is empty | $(craft::logCtx)" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | $(craft::logCtx) output='$output'" ; return 1 ;;
   esac
 }
 
@@ -44,14 +53,6 @@ function craft_max() {
   fi
   log::debug "We know how to craft item | item='$item' item_nr='$item_nr' recipe='$recipe'"
 
-  # Do some math to figure out how many we can craft
-  # We check how many items we can craft in terms of inventory space
-  # Then we check in terms of materials we have
-  if ! FARMRPG_MAX_INVENTORY="$(item::inventory::from_name "iron")"; then
-    log::err "Could not find max inventory"
-    return 1
-  fi
-
   local -r count="$(python3 << EOF
 # Load all the data into python
 import json
@@ -59,7 +60,7 @@ recipe = json.loads('$recipe')
 inventory = json.loads('$(inventory)')
 
 # Figure out how many we can craft to hit max inventory
-want_craft_inventory = int(($FARMRPG_MAX_INVENTORY - inventory.get('$item_nr', 0)) / $FARMRPG_CRAFTING_BOOST)
+want_craft_inventory = int($FARMRPG_MAX_INVENTORY - inventory.get('$item_nr', 0))
 
 # Figure how many we can craft given our materials
 want_craft_materials_dict = dict()
@@ -89,4 +90,88 @@ EOF
     craft_max "$@"
   fi
   return 0
+}
+
+function craftworks() {
+  craftworks::remove_all
+
+  # Iterate through input and make them all part of craftwords
+  local item_name item_obj item_nr
+  for item_name in "$@"; do
+    # Error check
+    if (( crafty_count++ > FARMRPG_CRAFTWORKS_SLOTS )); then
+      log::err "Cannot place items in craftworks, we only have FARMRPG_CRAFTWORKS_SLOTS slots | FARMRPG_CRAFTING_BOOST='$FARMRPG_CRAFTWORKS_SLOTS' item_name='$item_name'"
+      continue
+    fi
+
+    # Parse item
+    item_name="${1:?Item to place in craftworks}"
+    if ! item_obj="$(item::new::name "$item_name")"; then
+      log::err "Could not convert arg to item object | arg='$1'"
+      return 1
+    fi
+    item_nr="$(item_obj::num "$item_obj")"
+
+    # Do work
+    item_obj::craftworks::add "$item_obj"
+  done
+  craftworks::play_all
+}
+
+function craftworks::remove_all() {
+  # Do work
+  local output
+  if ! output="$(worker "go=removeallcw" "id=$id")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  # Deal with output
+  case "$output" in
+    success) log::info "Removed all items from craftworks" ;;
+    "") log::err "Failed to remove all items from craftworks" ; return 1;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
+  esac
+}
+
+function craftworks::play_all() {
+  # Do work
+  local output
+  if ! output="$(worker "go=playallcw" "id=$id")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  # Deal with output
+  case "$output" in
+    success) log::info "Played all items in craftworks" ;;
+    "") log::err "Failed to play all items in craftworks" ; return 1;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
+  esac
+}
+
+function item_obj::craftworks::add() {
+  # Parse args
+  local item_obj="${1:?}"
+
+  # Get item id
+  local item_id
+  if ! item_id="$(item_obj::num "$1")"; then
+    log::err "Failed to get item ID"
+    return 1
+  fi
+
+  # Do work
+  local output
+  if ! output="$(worker "go=addcwitem" "id=$item_id")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  # Deal with output
+  case "$output" in
+    success) log::info "Added craftworks item | item_obj='$item_obj'" ;;
+    "") log::err "Failed to add craftworks item | item_obj='$item_obj'" ; return 1;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
+  esac
 }

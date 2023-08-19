@@ -10,6 +10,6 @@ function collect_pet_items() {
   case "$output" in
     *item*collected) log::info "Successfully collected items | output='$output'" ;;
     "") log::err "Failed to collect pet items" ; return 1 ;;
-    *) log::warn "Unknown output to collect pet items | output='$output'" ; return 1 ;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
