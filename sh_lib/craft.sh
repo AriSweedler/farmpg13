@@ -105,7 +105,6 @@ function craftworks() {
     fi
 
     # Parse item
-    item_name="${1:?Item to place in craftworks}"
     if ! item_obj="$(item::new::name "$item_name")"; then
       log::err "Could not convert arg to item object | arg='$1'"
       return 1

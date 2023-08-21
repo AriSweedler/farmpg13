@@ -76,7 +76,11 @@ function worker::action::is_mutating() {
     craftitem |\
     donatecomm |\
     drinkgj |\
+    drinkoj |\
     drinkojs |\
+    drinkxojs |\
+    eatapple |\
+    eatxapples |\
     explore |\
     feedallpigs |\
     givemailitem |\

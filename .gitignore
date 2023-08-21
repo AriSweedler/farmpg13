@@ -1,4 +1,5 @@
 __pycache__
 *.log
 .prev_msg
+.loud_once_file
 output.txt

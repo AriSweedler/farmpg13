@@ -80,3 +80,46 @@ function fish::net::all() {
     (( --num_nets % 5 == 0 )) && fish::sell
   done
 }
+
+
+################################################################################
+function fish::selectbait() {
+  local item_name item_obj
+  item_name="${1:?Bait to set}"
+  if ! item_obj="$(item::new::name "$item_name")"; then
+    log::err "Could not convert arg to item object | arg='$1'"
+    return 1
+  fi
+
+  if ! item_obj::is_bait; then
+    log::err "Could not set item as bait - it is not bait | item_obj='$item_obj'"
+    return 1
+  fi
+
+  # Do work
+  local output
+  if ! output="$(worker "go=selectbait" "bait=$item_obj")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  # Deal with output
+  case "$output" in
+    success) log::info "Set bait | bait='$item_obj'" ;;
+    "") log::err "Failed to set bait | bait='$item_obj'" ; return 1;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
+  esac
+}
+
+function fish::mealworm() {
+  local loc
+  if ! loc="$(fish::loc_to_num "${1:?}")"; then
+    log::err "Couldn't turn arg into location to fish"
+    return 1
+  fi
+
+  fish::selectbait "Mealworms"
+  # TODO we wanna POST with a value 'r=???'... This is probably anti-cheat. If
+  # I can't do this right, then I shouldn't try to crack it. Too risky, not
+  # worth it.
+}

@@ -32,7 +32,8 @@ function captain::ensure_have() {
 
   # Do work
   log::info "We need to procure {{{ | $(ceh::logCtx)"
-  while (( i_have < i_want )); do
+  while true; do
+    # Figure out how to procure and delegate it
     procure_method="$(item_obj::procure_method "$item_obj")"
     case "$procure_method" in
       buy | craft | explore | explore_cider | farm_gj | farm | fish)
@@ -45,8 +46,11 @@ function captain::ensure_have() {
       unknown) log::warn "It is not known how to procure this item. You have to update ${BASH_SOURCE[0]} }}} | $(ceh::logCtx)" ; return 1;;
       *) log::err "Unknown procure method }}} | $(ceh::logCtx) procure_method='$procure_method'" ; return 1;;
     esac
-    # Update state
+
+    # Update state and log
     i_have="$(item_obj::inventory "$item_obj")"
+    (( i_have >= i_want )) && break
+    log::info "We are procuring | $(ceh::logCtx)"
   done
   log::info "We have procured }}} | $(ceh::logCtx)"
 }
@@ -60,11 +64,18 @@ function captain::ensure_have() {
 # * item_obj
 # * i_want i_have
 
+# Ensure we can plant
 # Ensure we have seeds
-# Ensure we can plant. If necessary: {wait, harvest}
-# Plant, wait, harvest
-function captain::_delegate::farm() {
+# Plant it
+# Return grow time
+function captain::_delegate::_farm() {
   local -r plant_obj="${item_obj:?}"
+
+  # Ensure we can plant
+  if ! farmland::till; then
+    log::err "Could not wait until plantable, something went wrong"
+    return 1
+  fi
 
   # Ensure we have enough seeds
   local seed_obj
@@ -74,32 +85,32 @@ function captain::_delegate::farm() {
     return 1
   fi
 
-  # Ensure we can plant
-  harvest
-  local rc grow_time
+  # Plant the plant
+  local grow_time
   grow_time="$(plant "$plant_obj")"
-  rc=$?
-  while (( rc != 0 )); do
-    if (( rc != 40 )); then
-      log::err "Failed to plant | plant_obj='$plant_obj' rc=$rc"
-      return 1
-    fi
-    seconds="$(time_until_farm_ready)"
-    log::warn "Waiting for current plants to grow... | plant_obj='$plant_obj' seconds='$seconds'"
-    sleep "$seconds"
-    harvest
-    grow_time="$(plant "$plant_obj")"
-    rc=$?
-  done
+  if [ -z "$grow_time" ]; then
+    log::err "Failed to plant - could not figure out what 'grow_time' should be"
+    return 1
+  fi
 
-  # Error check
+  # Error check and return
   if [ -z "$grow_time" ]; then
     log::err "No one set 'grow_time' for us"
     return 1
   fi
+  echo "$grow_time"
+}
+
+function captain::_delegate::farm() {
+  local -r plant_obj="${item_obj:?}"
+
+  # Plant
+  local grow_time
+  if ! grow_time="$(captain::_delegate::_farm "$plant_obj")"; then
+    return 1
+  fi
 
   # Wait for the plant to grow
-
   log::info "Waiting for plant to grow | item_obj='$item_obj'"
   sleep "$grow_time"
   log::info "Plant is grown | item_obj='$item_obj'"
@@ -115,35 +126,8 @@ function captain::_delegate::farm_gj() {
     return 1
   fi
 
-  # Ensure we have enough seeds
-  local seed_obj
-  seed_obj="$(item_obj::seed "$plant_obj")"
-  if ! captain::ensure_have "$seed_obj" "$FARMRPG_PLOTS"; then
-    log::err "Could not ensure that we have enough seeds | seed_obj='$seed_obj' want_to_have='$FARMRPG_PLOTS'"
-    return 1
-  fi
-
-  # Ensure we can plant
-  harvest
-  local rc grow_time
-  grow_time="$(plant "$plant_obj")"
-  rc=$?
-  while (( rc != 0 )); do
-    if (( rc != 40 )); then
-      log::err "Failed to plant | plant_obj='$plant_obj' rc=$rc"
-      return 1
-    fi
-    seconds="$(time_until_farm_ready)"
-    log::warn "Waiting for current plants to grow... | plant_obj='$plant_obj' seconds='$seconds'"
-    sleep "$seconds"
-    harvest
-    grow_time="$(plant "$plant_obj")"
-    rc=$?
-  done
-
-  # Error check
-  if [ -z "$grow_time" ]; then
-    log::err "No one set 'grow_time' for us"
+  # Plant
+  if ! captain::_delegate::_farm "$plant_obj"; then
     return 1
   fi
 
@@ -232,7 +216,7 @@ function captain::crop() {
   for crop_obj in "${crops[@]}"; do
     # Determine how many we need to have to stop growing this crop
     desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - $FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-    if [ "$crop_obj" == "mushroom" ]; then
+    if [ "$crop_obj" == "mushroom" ]; then # TODO write a "max desired" function for MEGA crops and include mushrooms in it
       desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
     fi
 
@@ -242,6 +226,40 @@ function captain::crop() {
 }
 
 function captain::paste() {
-  craftworks "mushroom_paste"
-  captain::ensure_have "mushroom" "$FARMRPG_PLOTS"
+  craftworks "mushroom_paste" "twine"
+  desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
+  captain::ensure_have "mushroom" "$desired_count"
+  # TODO figure out how to spend extra mushroom paste on crafting all the mushroom paste items...
+  # * some are for optimal resource use (maximize gem value - paste is worht 500 added silverg)
+  # * others are for holding (always have max shovels axes spoons etc)
+  # * And still others are for selling (create and sell canoe)
+  #
+  # amber_cane
+  # garnet_ring
+  # aquamarine_ring
+  # axe
+  # canoe
+  # emerald_ring
+  # fancy_drum
+  # fancy_guitar
+  # green_diary
+  # purple_diary
+  # leather_diary
+  # hourglass
+  # lemon_quartz_ring
+  # mystic_ring
+  # ruby_ring
+  # shimmer_ring
+  # shovel
+  # sturdy_bow
+  # sturdy_sword
+}
+
+function captain::nets() {
+  craft_max "twine"
+  craft_max "rope"
+  craft_max "fishing_net"
+  craft_max "iron_ring"
+  craft_max "large_net"
+  fish::net::all
 }

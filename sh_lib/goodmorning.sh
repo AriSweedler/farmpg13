@@ -224,7 +224,7 @@ function goodmorning() {
   gm::spinwheel
   gm::wishing_well "salt" # spiked_shell
   #vault::crack
-  
+
   # Friendship
   gm::friends
 }

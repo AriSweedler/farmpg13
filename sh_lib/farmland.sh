@@ -87,8 +87,42 @@ function plant() {
 }
 
 ################################################################################
+################################## till suite ##################################
+################################################################################
+# Returns a value in
+#
+#     growing
+#     grown
+#     empty
+#
+function farmland::status() {
+  page::panel_crops | bs4_helper::panel_crops::status
+}
 
-function time_until_farm_ready() {
+# Tilling a field must be done before planting
+function farmland::till() {
+  local farm_status
+  farm_status="$(farmland::status)"
+  case "$farm_status" in
+    grown) harvest && return $? ;;
+    growing)
+      log::warn "Crops are still growing. We will see how long until they are ready"
+      local seconds
+      seconds="$(farmland::seconds_until_ready)"
+      if [ "$seconds" != "0" ]; then
+        log::warn "Waiting for current plants to grow... | seconds='$seconds'"
+        sleep "$seconds"
+      fi
+
+      # Recurse. Should be harvestable now. Or maybe still need to wait a bit more
+      farmland::till
+      ;;
+    empty) return ;;
+    *) log::err "Unknown farm status | farm_status='$farm_status'"
+  esac
+}
+
+function farmland::seconds_until_ready() {
   # Measure
   local now l8r sleep=10
   log::info "Measuring how long it will take current crop to finish growing | measurement_time='$sleep'"
@@ -120,8 +154,35 @@ function time_until_farm_ready() {
 function bs4_helper::panel_crops::ready_percent() {
   python3 -c "from bs4 import BeautifulSoup
 import sys
-soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
-ans = soup.find('span', class_='c-progress-bar-fill pb11')['style'].split(':')[1].strip('%;')
-print(ans)
-  "
+
+def do_work():
+  soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
+  my_div = soup.find('span', class_='c-progress-bar-fill pb11')
+  if my_div is None:
+    return '0.0'
+  ready = my_div['style'].split(':')[1].strip('%;')
+  if ready == '100%; background-color':
+    return '100.0'
+  return ready
+
+print(do_work())
+"
+}
+
+function bs4_helper::panel_crops::status() {
+  python3 -c "from bs4 import BeautifulSoup
+import sys
+
+def do_work():
+  soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
+  my_div = soup.find('span', class_='c-progress-bar-fill pb11')
+  if my_div is None:
+    return 'empty'
+  ready = my_div['style'].split(':')[1].strip('%;')
+  if ready == '100%; background-color':
+    return 'grown'
+  return 'growing'
+
+print(do_work())
+"
 }

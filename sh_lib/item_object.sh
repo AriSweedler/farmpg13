@@ -48,7 +48,7 @@ function item::new::planted() {
   (( $# == 0 )) && return 1
 
   # lowercase
-  normz="$(tr '[:upper:]' '[:lower:]' <<< "$1")"
+  normz="$(tr '[:upper:] ' '[:lower:]_' <<< "$1")"
 
   # Strip unneeded trailing s
   if [[ "${normz: -1}" == "s" ]]; then
@@ -106,12 +106,13 @@ function item_obj::seed() {
     mushroom) ans="mushroom_spores" ;;
     peas) ans="pea_seeds" ;;
     gold_peas) ans="gold_pea_seeds" ;;
+    pine_tree) ans="pine_seeds" ;;
   esac
   if [ -n "$ans" ]; then
     echo "$ans"
     return
   fi
-  
+
   # All the remaining crops
   if is_in_array "$item_obj" $(_echo_short_crops) $(_echo_long_crops) $(_echo_mega_crops) $(_echo_gold_crops); then
     echo "${item_obj}_seeds"
@@ -164,7 +165,8 @@ function item_obj::procure_method() {
         echo "farm_gj"
         return
       fi
-      log::warn "We want more of a long crop, but we are out of grape juice for the day. Wait until tomorrow"
+
+      log::loud_once "We want more of a long crop, but we are out of grape juice for the day. Wait until tomorrow"
       echo "patience"
       return
     fi
@@ -326,7 +328,7 @@ function _echo_short_crops() {
     watermelon
     corn
     cabbage
-    pine
+    pine_tree
     pumpkin
   )
   for c in "${crops[@]}"; do

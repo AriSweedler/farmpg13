@@ -15,6 +15,14 @@ function log::debug() {
   log::_impl --level "debug" -- "$@"
 }
 
+function log::loud_once() {
+  if log::_loud_once::unseen "$@"; then
+    log::debug "$@"
+  else
+    log::warn "$@"
+  fi
+}
+
 function log::dev() {
   log::_impl --level "dev" -- "[DEVELOPMENT]" "$@"
 }
@@ -68,6 +76,39 @@ function log::_impl() {
   fi
   log_msg="$(log::_handle_prev_msg_state "$log_msg" "$@")"
   echo "$log_msg" >&2
+}
+
+function log::_loud_once::unseen() {
+  local -r log_msg="${1:?}"
+  shift 1
+
+  local loud_once_file
+  if ! loud_once_file="$(log::_init_loud_file)"; then
+    echo "ERROR:: Failed to init 'loud once' file" >&2
+    return 1
+  fi
+
+  # If the message shows up in the 'loud once' file, then we do not have to be loud again
+  [ -f "$loud_once_file" ] && grep -q "$log_msg" <<< "$(cat "$loud_once_file")"
+  local rc=$?
+  if (( rc != 0 )); then
+    echo "$log_msg" >> "$loud_once_file"
+  fi
+  return $rc
+}
+
+function log::_init_loud_file() {
+  dir="./.loud_once_file"
+  mkdir -p "$dir"
+  # shellcheck disable=SC2012
+  while (( $(ls -1 "$dir" | wc -l) > 10 )); do
+    rm "$dir/$(ls -1tr "$dir" | head -1)"
+  done
+
+  loud_once_file="$dir/log_logs.$$"
+  # shellcheck disable=SC2064
+  touch "$loud_once_file"
+  echo "$loud_once_file"
 }
 
 function log::_handle_prev_msg_state() {
