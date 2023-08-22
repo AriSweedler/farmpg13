@@ -114,7 +114,8 @@ function drink::orange_juice::all() {
   # Deal with output
   case "$output" in
     *drank*)
-      added_stamina="$(sed -nE "s/.*got ([0-9]+) stamina.*/\1/p" <<< "$output")"
+      output2=$(grep -o "got.*stamina" <<< "$output")
+      added_stamina="$(awk '{print $2}' <<< "$output2")"
       log::info "Drank all orange juice | added_stamina='$added_stamina'"
       ;;
     "You don't have any orange juice.") log::warn "$output" ;;

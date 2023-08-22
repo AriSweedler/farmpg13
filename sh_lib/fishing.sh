@@ -123,3 +123,13 @@ function fish::mealworm() {
   # I can't do this right, then I shouldn't try to crack it. Too risky, not
   # worth it.
 }
+
+function chore::fish() {
+  log::dev "TODO"
+  return
+
+  local count="${1:?}"
+  while (( count-- > 0 )); do
+    fish::mealworm "farm_pond"
+  done
+}

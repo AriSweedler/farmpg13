@@ -98,6 +98,8 @@ function worker::action::is_mutating() {
 
     # NOT mutating
     addcwitem |\
+    claimdaily |\
+    claimmastery |\
     incuallraptors |\
     petallchickens |\
     petallcows |\

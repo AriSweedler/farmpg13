@@ -68,27 +68,6 @@ function gm::rest_farmhouse() {
   esac
 }
 
-function gm::use_grape_juice() {
-  local -r plant_obj="$(item::new::name "beet")"
-  local -r seed_obj="$(item_obj::seed "$plant_obj")"
-  local -r qty=$((2*FARMRPG_PLOTS))
-  if ! captain::ensure_have "$seed_obj" "$qty"; then
-    log::err "Could not ensure that we have enough seeds for grapejuice boost | seed_obj='$seed_obj' qty='$qty'"
-    return 1
-  fi
-  harvest
-
-  local gj_uses=2
-  log::info "Using grapejuice on plant | plant='$plant_obj' seed='$seed_obj' gj_uses='$gj_uses'"
-  (set -e
-  while (( gj_uses > 0 )); do
-    plant "$plant_obj"
-    drink::grape_juice
-    harvest
-    ((gj_uses--))
-  done)
-}
-
 function gm::spinwheel() {
   local output
   if ! output="$(worker "go=spinfirst")"; then
@@ -125,6 +104,7 @@ function gm::items() {
   craft_max "red_dye"
   craft_max "red_shield"
   sell_max "red_shield"
+  sell_max "steak_kabob"
 
   # Place wine in the cellar
   # gm::wine
@@ -212,7 +192,6 @@ function goodmorning() {
   gm::raptors
   gm::work_storehouse
   gm::rest_farmhouse
-  #gm::use_grape_juice
 
   # Use and replenish items
   gm::orchard
@@ -225,8 +204,10 @@ function goodmorning() {
   gm::wishing_well "salt" # spiked_shell
   #vault::crack
 
-  # Friendship
+  # misc
   gm::friends
+  mastery::claim::all
+  captain::chores
 }
 
 function gm::friends() {

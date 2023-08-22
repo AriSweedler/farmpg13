@@ -13,27 +13,65 @@ soup = BeautifulSoup(sys.stdin.read(), 'html.parser')
 chore_divs = soup.find_all(class_='item-title', style='font-size:15px;')
 for chore_div in chore_divs:
   chore = chore_div.find('br').previous_sibling.strip()
-  status = chore_div.find('br').next_sibling.text.strip()
+  status = chore_div.find(class_='progressbar').find_previous_sibling().text.strip()
 EOF
 }
 
-function bs4_helper::chores::undone() {
+function bs4_helper::chores::desired_action() {
   python3 -c "
-$(bs4_helper::chores::for_chore_and_status)
+def decode_chore_to_action(chore, status):
+  # print(f'{chore=} {status=}')
   if status == 'Completed & Claimed!':
-    continue
-  elif status == 'Completed':
-    continue
-  else
-    print(chore)
-"
-}
+    return None
 
-# TODO worry about the undone ones
-function bs4_helper::chores::list() {
-  python3 -c "
+  # Parse information. Status is like:
+  # Progress: 4 / 4000, Reward: 25 AC
+  parts = status.split()
+  progress = int(parts[1])
+  target = int(parts[3].strip(','))
+  remaining = target - progress
+  if remaining <= 0:
+    return None
+
+  # Test to see if it is a known chore
+  words = chore.split()
+  directive = f'{words[0]} {\" \".join(words[2:])}'
+  # print(f'{chore=} {progress=} {target=} {directive=}')
+  if directive == 'Drink Orange Juice':
+    return f'drink::orange_juices {remaining}'
+  elif directive == 'Eat Apples':
+    return f'eat::apples {remaining}'
+  elif directive == 'Open Items at Locksmith':
+    return f'chore::locksmith {remaining}'
+  elif directive == 'Sell Items':
+    return f'sell stone {remaining}'
+  elif directive == 'Use Stamina':
+    return ':' # No-op - this will get accomplished normally
+  elif directive == 'Toss Items into Well':
+    return ':' # No-op - this will get accomplished normally
+  elif directive == 'Harvest Crops':
+    return ':' # No-op - this will get accomplished normally
+  elif chore == 'Stir a Meal':
+    return 'cook::bone_broth'
+  elif chore == 'Crack open The Vault':
+    return ':' # No-op - this will get accomplished normally
+  elif chore == 'Spin the Wheel of Borgen':
+    return ':' # No-op - this will get accomplished normally
+  elif f'{words[0]} {words[1]} {words[3]}' == 'Manually Catch Fish':
+    return f'chore::fish {words[2]}'
+
+  # Returning 'None' is acceptable
+  return None
+
 $(bs4_helper::chores::for_chore_and_status)
-  print(chore)
+  action = decode_chore_to_action(chore, status)
+  if action is not None:
+    print(f'{chore};{action}')
+
+for claim_me in soup.find_all('a', class_='claimbtn'):
+  id = claim_me['data-id']
+  action = f'chores::claim {id}'
+  print(f'claim;{action}')
 "
 }
 
@@ -45,89 +83,91 @@ $(bs4_helper::chores::for_chore_and_status)
 #
 function bs4_helper::chores::status() {
   python3 -c "
+def decide(chore, status):
+  # print(f'{chore=} {status=}')
+  if status == 'Completed & Claimed!':
+    return 'complete'
+
+  # Parse information. Status is like:
+  # Progress: 4 / 4000, Reward: 25 AC
+  parts = status.split()
+  progress = int(parts[1])
+  target = int(parts[3].strip(','))
+  # print(f'{progress=} {target=}')
+
+  # Get an answer
+  if progress >= target:
+    return 'unclaimed'
+  return 'incomplete'
+
+# Decide for each chore. Update a state machine
 ans = 'complete'
 $(bs4_helper::chores::for_chore_and_status)
-  if status == 'Completed & Claimed!':
+  d = decide(chore, status)
+  if d == 'incomplete':
+    ans = d
+    break
+  elif d == 'unclaimed':
+    ans = d
     continue
-  elif status == 'Completed':
-    ans = 'unclaimed'
-  else:
-    print('incomplete')
-    exit(0)
+
 print(ans)
 "
 }
 
 function blah() {
-  page::chores | bs4_helper::chores::status
+  page::chores | bs4_helper::chores::desired_action
 }
 
-function chores::do() {
-  local -r chore="${1:?}"
-  log::debug "Trying to do chore | chore='$chore'"
+###
 
-  local action number
-  case "$chore" in
-    "Drink"*"Orange Juice")
-      action="drinkojs"
-      number=$(grep -oE '[0-9]+' <<< "$chore")
-      ;;
-    "Open"*"Items at Locksmith")
-      action="open_locksmith"
-      number=$(grep -oE '[0-9]+' <<< "$chore")
-      ;;
-    "Eat"*"Apples")
-      action="eatxapples"
-      number=$(grep -oE '[0-9]+' <<< "$chore")
-      ;;
-
-    "Harvest 100 Crops" |\
-    "Sell 750 Items" |\
-    "ZZZ") log::info "A normal day of work will complete this chore" ; return ;;
-    *) log::err "Uncertain how to do this chore | chore='$chore'" ;;
-  esac
-
-  log::info "We need to do the action | action='$action' number='$number'"
-  echo "$action" "$number"
-}
-
-function chores::claim::one() {
+function chores::claim() {
   # Parse args
-  local -r chore_id="${1:?}"
+  local id="${1:?ID of daily quest}"
 
   # Do work
   local output
-  if ! output="$(worker "go=claimdaily" "id=$chore_id")"; then
+  if ! output="$(worker "go=claimdaily" "id=$id")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
 
-  # Validate output
+  # Deal with output
   case "$output" in
-    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
+    success) log::info "Claimed daily quest rewards" ;;
+    "") log::err "Failed to claim daily quest rewards" ; return 1;;
+    *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
-}
-
-function chores::claim::all() {
-  # https://farmrpg.com/worker.php?go=claimdaily&id=20008668
-  :
 }
 
 function captain::chores() {
-  local status
-  status="$(page::chores | bs4_helper::chores::status)"
-  log::
-  case "$status" in
-    incomplete) log::info "We have some chores to do" ;;
-    unclaimed) chores::claim_all ;;
-    complete) return 0 ;;
-    *) log::err "Unknown chores status | status='$status'" ; return 1 ;;
-  esac
-
   ( IFS=$'\n'       # Set the Internal Field Separator to newline
-  for chore in $(page::chores | bs4_helper::chores::list); do
-    chores::do "$chore"
+  local rc=0
+  for chore_action in $(page::chores | bs4_helper::chores::desired_action); do
+    # Destructure output of desired action into chores and actions
+    IFS=';' read -r chore action <<< "$chore_action"
+    # Split the action into an array that can be run as a command
+    IFS=' ' read -ra cmd <<< "$action"
+
+    case "$action" in
+      "")
+        rc=1
+        log::warn "Not sure how to accomplish chore | chore='$chore'"
+        continue
+        ;;
+      ":")
+        rc=2
+        log::warn "We must wait to accomplish the chore | chore='$chore'"
+        continue
+        ;;
+      *)
+        log::info "To accomplish chore we do | chore='$chore' action='$action'"
+        if ! "${cmd[@]}"; then
+          rc=3
+        fi
+        ;;
+    esac
   done
+  return $rc
   )
-  captain::chores
 }

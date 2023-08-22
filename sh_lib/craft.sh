@@ -75,8 +75,8 @@ for key, value in recipe.items():
 want_craft_materials = min(want_craft_materials_dict.values())
 
 # Give the answer
-ans = min(want_craft_inventory, want_craft_materials)
-print(max(0, ans))
+ans = min(want_craft_inventory, want_craft_materials*$FARMRPG_CRAFTING_BOOST)
+print(int(max(0, ans)))
 EOF
 )"
   if (( count == 0 )); then

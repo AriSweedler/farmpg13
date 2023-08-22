@@ -80,3 +80,19 @@ function explore::loc_to_num() {
 
   printf "%s" "$num"
 }
+
+function explore::shed() {
+  local item_name item_obj
+  item_name="${1:?Item to shed excess of}"
+  if ! item_obj="$(item::new::name "$item_name")"; then
+    log::err "Could not convert arg to item object | arg='$1'"
+    return 1
+  fi
+
+  if (( $(item_obj::inventory "$item_obj") < (FARMRPG_MAX_INVENTORY - 100) )); then
+    return
+  fi
+
+  # We have too many
+  sell "$item_obj" 100
+}

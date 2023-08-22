@@ -127,7 +127,7 @@ function captain::_delegate::farm_gj() {
   fi
 
   # Plant
-  if ! captain::_delegate::_farm "$plant_obj"; then
+  if ! captain::_delegate::_farm "$plant_obj" > /dev/null; then
     return 1
   fi
 
@@ -262,4 +262,51 @@ function captain::nets() {
   craft_max "iron_ring"
   craft_max "large_net"
   fish::net::all
+}
+
+# TODO pick priorities and figure out how to explore once
+# have a helper loop invoke it until we are done
+# Helper loop will use all remaining stamina
+# Make sure we are maxed out on mushroom paste, first
+function captain::explore() {
+  eat "onion_soup"
+  drink::orange_juice::all
+
+  local remaining_stamina
+  while (( $(item_obj::inventory "glass_orb") < (FARMRPG_MAX_INVENTORY-100) )); do
+    remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
+    craft_max "glass_bottle"
+    craft_max "cooking_pot"
+    craft_max "magicite"
+    explore::shed "magicite"
+    if (( remaining_stamina < 1060 )); then
+      return
+    fi
+  done
+
+  while remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"; do
+    craft_max "apple_cider"
+    craft_max "orange_juice"
+    craft_max "lemonade"
+    craft_max "garnet"
+    craft_max "garnet_ring"
+    craft_max "iron_ring"
+    if (( $(item_obj::inventory "stone") < (100) )); then
+      remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
+      if (( remaining_stamina < 1060 )); then
+        return
+      fi
+    fi
+    craft_max "salt"
+    craft_max "red_dye"
+    craft_max "canoe"
+    explore::shed "slimestone"
+    explore::shed "blue_gel"
+    explore::shed "red_berries"
+    explore::shed "sour_root"
+    explore::shed "thorns"
+    if (( remaining_stamina < 1060 )); then
+      return
+    fi
+  done
 }
