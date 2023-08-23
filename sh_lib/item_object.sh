@@ -58,6 +58,7 @@ function item::new::planted() {
   case "$normz" in
     hop) normz="hops" ;;
     pea) normz="peas" ;;
+    radishe) normz="radish" ;;
   esac
 
   # Fix the abnormal pluralization
@@ -240,6 +241,24 @@ function item_obj::explore_location {
   fi
 
   printf "%s" "$loc"
+}
+
+function item_obj::as_bait() {
+  local item_obj="${1:?}"
+
+  if ! (( $(item_obj::inventory "$item_obj") > 0 )); then
+    log::err "You tried to set the bait for something you're all out of | item_obj='$item_obj'"
+    return
+  fi
+
+  case "$item_obj" in
+    grubs) echo "Grubs" ;;
+    gummy_worms) echo "Gummy Worms" ;;
+    mealworms) echo "Mealworms" ;;
+    minnows) echo "Minnows" ;;
+    worms) echo "Worms" ;;
+    *) return 1 ;;
+  esac
 }
 ################################################################################
 ################################ classification ################################

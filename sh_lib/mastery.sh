@@ -30,7 +30,15 @@ function mastery::claim() {
 
   # Deal with output
   case "$output" in
-    *"Reward Claimed:"*) log::info "Claimed mastery rewards | output='$output'" ;;
+    *"Reward Claimed:"*)
+      log::debug "Claimed mastery reward | output='$output'"
+      local reward
+      reward="$(echo "$output" \
+        | grep -o 'vertical-align:middle.>.*<br/>' \
+        | awk -F'[><]' '{print $2}')"
+      reward="${reward:# }"
+      log::info "Claimed mastery reward | reward='$reward'"
+      ;;
     "") log::err "Failed to claim mastery rewards" ; return 1;;
     *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac

@@ -180,3 +180,33 @@ function drink::orange_juices() {
     (( count -= 1 ))
   done
 }
+
+################################################################################
+################################### lemonade ###################################
+################################################################################
+
+function drink::arnold_palmer() {
+  local loc explore_loc_num
+  loc="${1:?}"
+  explore_loc_num="$(explore::loc_to_num "$loc")"
+
+  # Do work
+  local output
+  if ! output="$(worker "go=drinklm" "id=$explore_loc_num")"; then
+    log::err "Failed to invoke worker"
+    return 1
+  fi
+
+  case "$output" in
+    *"helped you find"*) log::info "Successfully drank an arnold palmer" ;;
+    *) log::err "Failed to drink an arnold palmer | output='$output'" ; return 1 ;;
+  esac
+}
+
+function drink::lemonades() {
+  local count="${1:?}"
+  while (( count > 0 )); do
+    drink::arnold_palmer "whispering_creek"
+    (( count -= 20 ))
+  done
+}

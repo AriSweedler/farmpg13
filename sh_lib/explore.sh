@@ -43,7 +43,11 @@ function explore::one() {
   log::debug "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
   log::info "Explored successfully | loc='$loc' args='${args[*]}'"
 
-  echo "$remaining_stamina"
+  if [ -z "$remaining_stamina" ] && [ "$drink_cider" == "true" ]; then
+    log::warn "Not enough stamina to use an apple cider | output='$output'"
+    remaining_stamina=0
+  fi
+  echo "$remaining_stamina" | tr -d ','
 }
 
 function explore() {

@@ -19,7 +19,10 @@ for element in elements:
 "
 }
 
-function valut::guess::from_status() {
+function valut::generate_guess() {
+  log::dev "TODO"
+  exit 1
+
   python3 -c "
 import sys
 
@@ -37,21 +40,6 @@ def generate_guess(input_data):
 input_data = [line.strip().split(';') for line in sys.stdin]
 print(generate_guess(input_data))
 "
-}
-
-function vault::crack() {
-  #local -r guess="$(vault::status | valut::guess::from_status)"
-  #echo "$guess"
-  #return
-#
-#
-  ## Go until we know all the numbers that are used
-  ## permute them until they are correct
-#
-  vault::guess_code 8256
-  vault::status
-  # <strong>VAULT UNLOCKED</strong><br/>36,241,036 Silver is yours!
-
 }
 
 function vault::guess_code() {
@@ -73,8 +61,33 @@ function vault::guess_code() {
     log::err "Failed to invoke worker"
     return 1
   fi
-  log::warn "Tried to crack code | output='$output'"
-
-  log::warn "Vault status | status='$(vault::status)'"
+  log::debug "Tried to crack code | output='$output'"
+  log::debug "Vault status | status='$(vault::status)'"
+  vault::status
 }
 
+function vault::crack() {
+  local guess num_guesses=0
+  while (( num_guesses < FARMRPG_VAULT_GUESSES )); do
+    # Pick a guess
+    if ! guess="$(vault::status | vault::generate_guess)"; then
+      local status="$(vault::status)"
+      log::err "Failed to generate a guess | status='$status'"
+      return 1
+    fi
+
+    # Send the guess
+    if ! output="$(vault::guess_code "$guess")"; then
+      log::err "Failed to guess a code | guess='$guess'"
+      return 1
+    fi
+
+    # Parse output
+    case "$output" in
+      *"VAULT UNLOCKED"*)
+        log::info "Unlocked vault! | code='$code' num_guesses='$num_guesses'"
+        return
+        ;;
+    esac
+  done
+}

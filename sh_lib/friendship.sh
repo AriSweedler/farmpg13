@@ -1,3 +1,7 @@
+function friendship::buddy() {
+  friendship::_give "gummy_worms" "22447"
+}
+
 function friendship::roomba() {
   friendship::_give "carbon_sphere" "71761"
 }
@@ -23,6 +27,11 @@ function friendship::_give() {
     return 1
   fi
 
+  if (( qty <= 0 )); then
+    log::warn "Nothing to give to friend | item_obj='$item_obj' qty='$qty'"
+    return 1
+  fi
+
   local output
   if ! output="$(worker "go=givemailitem" "id=$item_id" "to=$recipient" "qty=$qty")"; then
     log::err "Failed to invoke worker"
@@ -30,7 +39,7 @@ function friendship::_give() {
   fi
 
   case "$output" in
-    success) log::info "Gave item to friend | item='$item_name/$item_id qty='$qty'" ; return 0;;
+    success) log::info "Gave item to friend | item='$item_obj/$item_id qty='$qty'" ; return 0;;
     "") log::err "Failed to give item to friend" ; return 1 ;;
   esac
 }

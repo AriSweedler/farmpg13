@@ -72,11 +72,12 @@ function sell_cap::one::nr() {
 }
 
 function sell_cap() {
-  local item_nr
+  local item_nr item_obj item_name
   for item_nr in $(
     jq -r --arg inv_cap "$FARMRPG_MAX_INVENTORY" 'to_entries[] | select(.value >= ($inv_cap|tonumber)) | .key' <(inventory)
   ); do
-    item_name="$(item::num_to_name "$item_nr")"
+    item_obj="$(item::new::number "$item_nr")"
+    item_name="$(item_obj::name "$item_obj")"
     # Skip keepable items
     case "$(_sale_decision "$item_name")" in
       keep) log::debug "Item is at capacity but is keepable | item_nr='$item_nr' item_name='$item_name'" ;;
@@ -106,7 +107,7 @@ function _sale_decision() {
     | thorns | white_parchment | mealworms | mushroom | mushroom_paste | slimestone \
     | steel_wire | grubs | carrot | eggplant | hops | leek | onion | 4-leaf_clover \
     | ruby | spoon | axe | arrowhead | blue_gel | bucket | essence_of_slime | feed \
-    | hammer | red_berries) echo "keep" ;;
+    | hammer | red_berries | cabbage | yarn | steak | chum | butter_churn ) echo "keep" ;;
 
     lantern | fancy_pipe | studry_shielf | green_chromis | small_prawn \
     | swordfish | barracuda | sea_catfish | plumbfish | spiral_shell | serpent_eel | ruby_coral \

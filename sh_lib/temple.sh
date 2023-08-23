@@ -26,7 +26,7 @@ function temple::sacrifice_item() {
   esac
 }
 
-function temple::cycle() {
+function captain::temple() {
   while (( $(item_obj::inventory "watermelon") < 900 )); do
     captain::ensure_have watermelon 500
     log::info "Donating"

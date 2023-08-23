@@ -83,6 +83,7 @@ function worker::action::is_mutating() {
     eatxapples |\
     explore |\
     feedallpigs |\
+    fishcaught |\
     givemailitem |\
     harvestall |\
     loadfeedmill |\
@@ -106,6 +107,7 @@ function worker::action::is_mutating() {
     removeallcw |\
     rest |\
     seasonmeal |\
+    selectbait |\
     setfarmseedcounts |\
     stirmeal |\
     tastemeal |\

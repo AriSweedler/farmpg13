@@ -81,7 +81,6 @@ function fish::net::all() {
   done
 }
 
-
 ################################################################################
 function fish::selectbait() {
   local item_name item_obj
@@ -91,14 +90,15 @@ function fish::selectbait() {
     return 1
   fi
 
-  if ! item_obj::is_bait; then
+  local bait_formal
+  if ! bait_formal="$(item_obj::as_bait "$item_obj")"; then
     log::err "Could not set item as bait - it is not bait | item_obj='$item_obj'"
     return 1
   fi
 
   # Do work
   local output
-  if ! output="$(worker "go=selectbait" "bait=$item_obj")"; then
+  if ! output="$(worker "go=selectbait" "bait=$bait_formal" "r=$RANDOM")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -111,25 +111,38 @@ function fish::selectbait() {
   esac
 }
 
-function fish::mealworm() {
-  local loc
-  if ! loc="$(fish::loc_to_num "${1:?}")"; then
-    log::err "Couldn't turn arg into location to fish"
-    return 1
-  fi
-
-  fish::selectbait "Mealworms"
-  # TODO we wanna POST with a value 'r=???'... This is probably anti-cheat. If
-  # I can't do this right, then I shouldn't try to crack it. Too risky, not
-  # worth it.
-}
-
 function chore::fish() {
-  log::dev "TODO"
-  return
+  function fish::_mealworm() {
+    local fish_loc="${1:?}"
+    if ! loc_id="$(fish::loc_to_num "$fish_loc")"; then
+      log::err "Couldn't turn arg into location to fish"
+      return 1
+    fi
+
+    # Do work
+    local output
+    if ! output="$(worker "go=fishcaught" "id=$loc_id")"; then
+      log::err "Failed to invoke worker"
+      return 1
+    fi
+
+    # Parse output
+    case "$output" in
+      *fishcnt*)
+        local caught
+        caught="$(echo "$output" | grep -o 'itemimg. ><br/>.*<span' | awk -F'[><]' '{print $4}')"
+        log::info "Fished with a mealworm | caught='$caught'"
+        ;;
+      "") log::err "Failed to fish with a mealworm | output='$output'" ; return 1;;
+    esac
+  }
 
   local count="${1:?}"
   while (( count-- > 0 )); do
-    fish::mealworm "farm_pond"
+    # Set state
+    fish::selectbait "Mealworms"
+    fish::_mealworm "farm_pond"
   done
+
+  unset fish::_mealworm
 }

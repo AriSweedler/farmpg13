@@ -110,12 +110,6 @@ function gm::items() {
   # gm::wine
 }
 
-function gm::explore() {
-  # Use OJ and then apple cider at locations
-  # Eat an onion soup
-  :
-}
-
 function gm::items::money() {
   craft_max "sturdy_bow"
   craft_max "sturdy_shield"
@@ -184,7 +178,13 @@ function gm::fishing() {
   craft_max "rope"
 }
 
-function goodmorning() {
+function gm::friends() {
+  friendship::thomas
+  friendship::roomba
+  friendship::buddy
+}
+
+function captain::goodmorning() {
   # Farm stuff
   gm::pet_chickens
   gm::pet_cows
@@ -208,9 +208,4 @@ function goodmorning() {
   gm::friends
   mastery::claim::all
   captain::chores
-}
-
-function gm::friends() {
-  friendship::thomas
-  friendship::roomba
 }

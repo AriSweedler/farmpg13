@@ -39,6 +39,8 @@ def decode_chore_to_action(chore, status):
   # print(f'{chore=} {progress=} {target=} {directive=}')
   if directive == 'Drink Orange Juice':
     return f'drink::orange_juices {remaining}'
+  if directive == 'Drink Lemonade':
+    return f'drink::lemonades {remaining}'
   elif directive == 'Eat Apples':
     return f'eat::apples {remaining}'
   elif directive == 'Open Items at Locksmith':

@@ -269,10 +269,11 @@ function captain::nets() {
 # Helper loop will use all remaining stamina
 # Make sure we are maxed out on mushroom paste, first
 function captain::explore() {
-  eat "onion_soup"
+  # eat "onion_soup"
   drink::orange_juice::all
 
   local remaining_stamina
+  remaining_stamina="$(explore::one --loc "whispering_creek")"
   while (( $(item_obj::inventory "glass_orb") < (FARMRPG_MAX_INVENTORY-100) )); do
     remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
     craft_max "glass_bottle"
@@ -280,11 +281,12 @@ function captain::explore() {
     craft_max "magicite"
     explore::shed "magicite"
     if (( remaining_stamina < 1060 )); then
-      return
+      break
     fi
   done
 
-  while remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"; do
+  while (( remaining_stamina > 1060 )); do
+    remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"
     craft_max "apple_cider"
     craft_max "orange_juice"
     craft_max "lemonade"
@@ -294,7 +296,7 @@ function captain::explore() {
     if (( $(item_obj::inventory "stone") < (100) )); then
       remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
       if (( remaining_stamina < 1060 )); then
-        return
+        break
       fi
     fi
     craft_max "salt"
@@ -305,8 +307,9 @@ function captain::explore() {
     explore::shed "red_berries"
     explore::shed "sour_root"
     explore::shed "thorns"
-    if (( remaining_stamina < 1060 )); then
-      return
-    fi
   done
+
+  # Use remaining stamina on just exploring
+  log::info "Using remaining stamina to explore whispering_creek"
+  explore --loc "whispering_creek"
 }
