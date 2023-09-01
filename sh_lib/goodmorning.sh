@@ -36,8 +36,16 @@ function gm::feed_pigs() {
     *) log::err "Failed to feed piggies (L)" ; return 1 ;;
   esac
 
-  # Place broccoli in the feeder
-  # feed_mill::load broccoli 1
+  # Place corn in the feeder
+  local i_have_feed i_want_feed i_macerate_corn
+  if ! i_have_feed="$(item_obj::inventory "feed")"; then
+    log::err "Could not figure out how much to donate"
+    return 1
+  fi
+  i_want_feed=$((FARMRPG_MAX_INVENTORY - 100))
+  loaded_feed=0 # TODO scrape to learn how much we have loaded already
+  i_macerate_corn=$(( (i_want_feed-i_have_feed-loaded_feed) / 2))
+  feed_mill::load corn "$i_macerate_corn"
 }
 
 function gm::work_storehouse() {
@@ -105,9 +113,6 @@ function gm::items() {
   craft_max "red_shield"
   sell_max "red_shield"
   sell_max "steak_kabob"
-
-  # Place wine in the cellar
-  # gm::wine
 }
 
 function gm::items::money() {
@@ -119,19 +124,6 @@ function gm::items::money() {
   sell_max "sturdy_shield"
   sell_max "fancy_pipe"
   sell_max "lantern"
-}
-
-function gm::wine() {
-  craft_max "wine"
-  if ! wine_i_have="$(item_obj::inventory "wine")"; then
-    log::err "Failed to read how much win we have"
-    return 1
-  fi
-
-  # Store all the wine we have
-  while ((wine_i_have-- > 0)); do
-    cellar::store_wine
-  done
 }
 
 function gm::raptors() {
@@ -148,22 +140,39 @@ function gm::raptors() {
 }
 
 function gm::wishing_well() {
-  # TODO build safeguard to not spend gold
-
   # Parse args
   if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1
   fi
 
+# # YES items
+  # You have thrown <strong>9</strong> things into the well today
+# # NO items
+  # todo...
+  local thrown cap
+  cap=9
+  thrown="$(farmpg13::page "well.php" \
+    | grep -o 'thrown\(.*\)things into the well' \
+    | awk -F'[><]' '{print $3}')"
+  if (( thrown >= cap )); then
+    log::warn "We used all our wishing well today | thrown='$thrown'"
+    return
+  fi
+
+  # Compute how many to throw
+  local throw_num=$((cap - thrown))
+
+  # Do work
   local output
-  if ! output="$(worker "go=tossmanyintowell" "id=$item_id" "amt=9")"; then
+  if ! output="$(worker "go=tossmanyintowell" "id=$item_id" "amt=$throw_num")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
 
+  # Validate output
   case "$output" in
-    "Gold spent for") log::err "WHY THE FUCK DID YOU DO THIS" ;;
+    "Gold spent for") log::err "Spent gold at the wishing well. This is probably a bug" ;;
     *) log::info "Wished in the well | output='$output'" ;;
   esac
 }
@@ -192,12 +201,12 @@ function captain::goodmorning() {
   gm::raptors
   gm::work_storehouse
   gm::rest_farmhouse
+  captain::cellar
 
   # Use and replenish items
   gm::orchard
   gm::items
   gm::fishing
-  gm::explore
 
   # Town stuff
   gm::spinwheel

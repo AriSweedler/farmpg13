@@ -20,7 +20,6 @@ EOF
 function bs4_helper::chores::desired_action() {
   python3 -c "
 def decode_chore_to_action(chore, status):
-  # print(f'{chore=} {status=}')
   if status == 'Completed & Claimed!':
     return None
 
@@ -35,6 +34,8 @@ def decode_chore_to_action(chore, status):
 
   # Test to see if it is a known chore
   words = chore.split()
+  if len(words) < 3:
+    return None
   directive = f'{words[0]} {\" \".join(words[2:])}'
   # print(f'{chore=} {progress=} {target=} {directive=}')
   if directive == 'Drink Orange Juice':
@@ -46,7 +47,9 @@ def decode_chore_to_action(chore, status):
   elif directive == 'Open Items at Locksmith':
     return f'chore::locksmith {remaining}'
   elif directive == 'Sell Items':
-    return f'sell stone {remaining}'
+    return f'sell eggs {remaining}'
+  elif directive == 'Cast Fishing Nets':
+    return f'fish::nets {remaining}'
   elif directive == 'Use Stamina':
     return ':' # No-op - this will get accomplished normally
   elif directive == 'Toss Items into Well':
@@ -55,15 +58,18 @@ def decode_chore_to_action(chore, status):
     return ':' # No-op - this will get accomplished normally
   elif chore == 'Stir a Meal':
     return 'cook::bone_broth'
+  elif chore == 'Taste a Meal':
+    return f'cook::bone_broth'
+  elif chore == 'Season a Meal':
+    return f'cook::bone_broth'
   elif chore == 'Crack open The Vault':
     return ':' # No-op - this will get accomplished normally
   elif chore == 'Spin the Wheel of Borgen':
     return ':' # No-op - this will get accomplished normally
-  elif f'{words[0]} {words[1]} {words[3]}' == 'Manually Catch Fish':
+  elif len(words) > 3 and f'{words[0]} {words[1]} {words[3]}' == 'Manually Catch Fish':
     return f'chore::fish {words[2]}'
 
-  # Returning 'None' is acceptable
-  return None
+  return f'Unknown'
 
 $(bs4_helper::chores::for_chore_and_status)
   action = decode_chore_to_action(chore, status)
@@ -117,12 +123,6 @@ print(ans)
 "
 }
 
-function blah() {
-  page::chores | bs4_helper::chores::desired_action
-}
-
-###
-
 function chores::claim() {
   # Parse args
   local id="${1:?ID of daily quest}"
@@ -136,13 +136,13 @@ function chores::claim() {
 
   # Deal with output
   case "$output" in
-    success) log::info "Claimed daily quest rewards" ;;
+    success) log::info "Claimed daily quest rewards | id='$id'" ;;
     "") log::err "Failed to claim daily quest rewards" ; return 1;;
     *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
 
-function captain::chores() {
+function chores::work() {
   ( IFS=$'\n'       # Set the Internal Field Separator to newline
   local rc=0
   for chore_action in $(page::chores | bs4_helper::chores::desired_action); do
@@ -152,7 +152,7 @@ function captain::chores() {
     IFS=' ' read -ra cmd <<< "$action"
 
     case "$action" in
-      "")
+      "" | Unknown)
         rc=1
         log::warn "Not sure how to accomplish chore | chore='$chore'"
         continue
@@ -171,5 +171,22 @@ function captain::chores() {
     esac
   done
   return $rc
-  )
+  ) # Reset the IFS
+}
+
+function captain::chores() {
+  # One pass to accomplish as many chores as possible, exiting early if we are
+  # done, and a secone pass to claim all the chores we just accomplished
+  for _ in 1 2; do
+    if chores::work; then
+      log::info "Chores are all completed! :)"
+      return
+    fi
+  done
+
+  log::warn "There are more chores to accomplish"
+}
+
+function chores::debug() {
+  page::chores | bs4_helper::chores::desired_action
 }

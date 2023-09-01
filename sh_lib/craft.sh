@@ -174,3 +174,15 @@ function item_obj::craftworks::add() {
     *) log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'" ; return 1 ;;
   esac
 }
+
+function craft::use_paste() {
+  craft_max "hammer"
+  craft_max "shovel"
+  craft_max "canoe"
+  craft_max "fancy_guitar"
+  craft_max "garnet_ring"
+  craft_max "axe"
+  craft_max "leather_diary"
+  craft_max "purple_diary"
+  craft_max "green_diary"
+}

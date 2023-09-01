@@ -108,5 +108,9 @@ function cook::bone_broth() {
 }
 
 function cook::onion_soup() {
-  cook::_impl "onion_soup" "2700"
+  cook::_impl "onion_soup" "3000"
+}
+
+function cook::cats_meow() {
+  cook::_impl "cat’s_meow" "6000"
 }

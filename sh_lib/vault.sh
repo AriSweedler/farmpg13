@@ -19,26 +19,39 @@ for element in elements:
 "
 }
 
-function valut::generate_guess() {
-  log::dev "TODO"
-  exit 1
-
+function vault::generate_guess() {
   python3 -c "
 import sys
 
-def generate_guess(input_data):
+def valid_guesses(input_data):
     # Valid numbers are digits 0-9
     valid_numbers = [str(i) for i in range(10)]
-    # Get all the elements of 'input_data' where the second value is 'G'
+    # Get all the elements of 'input_data' where the second value is 'G'.
+    # Eliminate them from guesses
     grey_guesses = set([i[2] for i in input_data if i[1] == 'G'])
-    yell_guesses = set([(i[0], i[2]) for i in input_data if i[1] == 'Y'])
-    blue_guesses = set([(i[0], i[2]) for i in input_data if i[1] == 'B'])
-    # Remove the grey guesses from the list of valid numbers
     valid_numbers = [i for i in valid_numbers if i not in grey_guesses]
-    return input_data
+
+    col_guess = [[], [], [], []]
+    for col in range(4):
+      blue_guesses_col = set(i[2] for i in input_data if i[1] == 'B' and i[0] == col)
+      if len(blue_guesses_col) != 0:
+        col_guess[col] = [blue_guesses_col[:]]
+        continue
+      yell_guesses_col = set(i[2] for i in input_data if i[1] == 'Y' and i[0] == col)
+      col_guess[col] = [i for i in valid_numbers if i not in yell_guesses_col]
+
+    return col_guess
+
+def generate_guess(valid_guesses):
+  ans = [-1, -1, -1, -1]
+  for col_i in range(4):
+    for i in valid_guesses[col_i]:
+      if i not in ans:
+        ans[col_i] = i
+  return ans
 
 input_data = [line.strip().split(';') for line in sys.stdin]
-print(generate_guess(input_data))
+print(''.join(generate_guess(valid_guesses(input_data))))
 "
 }
 
@@ -61,33 +74,40 @@ function vault::guess_code() {
     log::err "Failed to invoke worker"
     return 1
   fi
+
+  # Parse output
+  case "$output" in
+    *"VAULT UNLOCKED"*)
+      log::info "Unlocked vault! | code='$code' num_guesses='$num_guesses'"
+      return 0
+      ;;
+  esac
+
   log::debug "Tried to crack code | output='$output'"
   log::debug "Vault status | status='$(vault::status)'"
   vault::status
+  return 2
 }
 
 function vault::crack() {
   local guess num_guesses=0
-  while (( num_guesses < FARMRPG_VAULT_GUESSES )); do
+  while (( num_guesses++ < FARMRPG_VAULT_GUESSES )); do
+    vstatus="$(vault::status)"
+    log::info "status | vstatus='$vstatus'"
     # Pick a guess
     if ! guess="$(vault::status | vault::generate_guess)"; then
       local status="$(vault::status)"
-      log::err "Failed to generate a guess | status='$status'"
+      log::err "Failed to generate a guess $(date)| status='$status'"
       return 1
     fi
 
     # Send the guess
-    if ! output="$(vault::guess_code "$guess")"; then
-      log::err "Failed to guess a code | guess='$guess'"
-      return 1
-    fi
-
-    # Parse output
-    case "$output" in
-      *"VAULT UNLOCKED"*)
-        log::info "Unlocked vault! | code='$code' num_guesses='$num_guesses'"
-        return
-        ;;
+    local output
+    output="$(vault::guess_code "$guess")"
+    case $? in
+      0) log::info "Cracked the vault!" return ;;
+      1) log::err "Failed to guess a code | guess='$guess'"; return 1 ;;
+      2) log::warn "Wrong code. Keep guessing"; continue ;;
     esac
   done
 }

@@ -34,9 +34,10 @@ function mastery::claim() {
       log::debug "Claimed mastery reward | output='$output'"
       local reward
       reward="$(echo "$output" \
-        | grep -o 'vertical-align:middle.>.*<br/>' \
-        | awk -F'[><]' '{print $2}')"
-      reward="${reward:# }"
+        | sed 's|<br/>|\n|g' \
+        | awk -F'[><]' '/img/ {print $3}' \
+        | tr '\n' ';')"
+      reward="${reward# }"
       log::info "Claimed mastery reward | reward='$reward'"
       ;;
     "") log::err "Failed to claim mastery rewards" ; return 1;;

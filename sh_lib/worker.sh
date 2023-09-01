@@ -108,6 +108,7 @@ function worker::action::is_mutating() {
     rest |\
     seasonmeal |\
     selectbait |\
+    sellwine |\
     setfarmseedcounts |\
     stirmeal |\
     tastemeal |\

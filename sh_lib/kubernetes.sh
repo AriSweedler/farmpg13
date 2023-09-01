@@ -37,6 +37,7 @@ function captain::ensure_have() {
     procure_method="$(item_obj::procure_method "$item_obj")"
     case "$procure_method" in
       buy | craft | explore | explore_cider | farm_gj | farm | fish)
+        log::info "We are procuring | $(ceh::logCtx)"
         if ! "captain::_delegate::$procure_method"; then
           log::err "Failed to delegate procurement of item }}} | $(ceh::logCtx)"
           return 1
@@ -50,7 +51,6 @@ function captain::ensure_have() {
     # Update state and log
     i_have="$(item_obj::inventory "$item_obj")"
     (( i_have >= i_want )) && break
-    log::info "We are procuring | $(ceh::logCtx)"
   done
   log::info "We have procured }}} | $(ceh::logCtx)"
 }
@@ -262,54 +262,4 @@ function captain::nets() {
   craft_max "iron_ring"
   craft_max "large_net"
   fish::net::all
-}
-
-# TODO pick priorities and figure out how to explore once
-# have a helper loop invoke it until we are done
-# Helper loop will use all remaining stamina
-# Make sure we are maxed out on mushroom paste, first
-function captain::explore() {
-  # eat "onion_soup"
-  drink::orange_juice::all
-
-  local remaining_stamina
-  remaining_stamina="$(explore::one --loc "whispering_creek")"
-  while (( $(item_obj::inventory "glass_orb") < (FARMRPG_MAX_INVENTORY-100) )); do
-    remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
-    craft_max "glass_bottle"
-    craft_max "cooking_pot"
-    craft_max "magicite"
-    explore::shed "magicite"
-    if (( remaining_stamina < 1060 )); then
-      break
-    fi
-  done
-
-  while (( remaining_stamina > 1060 )); do
-    remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"
-    craft_max "apple_cider"
-    craft_max "orange_juice"
-    craft_max "lemonade"
-    craft_max "garnet"
-    craft_max "garnet_ring"
-    craft_max "iron_ring"
-    if (( $(item_obj::inventory "stone") < (100) )); then
-      remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
-      if (( remaining_stamina < 1060 )); then
-        break
-      fi
-    fi
-    craft_max "salt"
-    craft_max "red_dye"
-    craft_max "canoe"
-    explore::shed "slimestone"
-    explore::shed "blue_gel"
-    explore::shed "red_berries"
-    explore::shed "sour_root"
-    explore::shed "thorns"
-  done
-
-  # Use remaining stamina on just exploring
-  log::info "Using remaining stamina to explore whispering_creek"
-  explore --loc "whispering_creek"
 }

@@ -13,7 +13,7 @@ function temple::sacrifice_item() {
     return 1
   fi
 
-  if ! output="$(worker "go=sacrificeitem" "sac_item=$sac_item" "amt=$amt")"; then
+  if ! output="$(worker "go=sacrificeitem" "item=$sac_item" "amt=$amt")"; then
     log::err "Failed to invoke worker"
     return 1
   fi

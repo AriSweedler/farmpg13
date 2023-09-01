@@ -39,7 +39,7 @@ function explore::one() {
     return 1
   fi
   local remaining_stamina
-  remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output")"
+  remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output" | tr -d ',')"
   log::debug "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
   log::info "Explored successfully | loc='$loc' args='${args[*]}'"
 
@@ -47,7 +47,7 @@ function explore::one() {
     log::warn "Not enough stamina to use an apple cider | output='$output'"
     remaining_stamina=0
   fi
-  echo "$remaining_stamina" | tr -d ','
+  echo "$remaining_stamina"
 }
 
 function explore() {
@@ -99,4 +99,120 @@ function explore::shed() {
 
   # We have too many
   sell "$item_obj" 100
+}
+
+# TODO pick priorities and figure out how to explore once
+# have a helper loop invoke it until we are done
+# Helper loop will use all remaining stamina
+# Make sure we are maxed out on mushroom paste, first
+function captain::explore() {
+  eat "onion_soup"
+  drink::orange_juice::all
+  captain::explore::whispering_creek
+}
+
+function explore::get_current_stamina() {
+  # TODO fix this
+  explore::one --loc "whispering_creek"
+}
+
+# TODO write captain::explore::ensure_item ... to make exploring also craft
+function captain::explore::glass_orb() {
+  local remaining_stamina
+  remaining_stamina="$(explore::get_current_stamina)"
+
+  # TODO do u wanna explore to exhaustion for a resource or until out of stamina
+  while (( $(item_obj::inventory "glass_orb") < (FARMRPG_MAX_INVENTORY-100) )); do
+    remaining_stamina="$(explore::one --apple_cider --item "glass_orb")"
+    craft_max "glass_bottle"
+    craft_max "cooking_pot"
+    craft_max "magicite"
+    explore::shed "magicite"
+    if (( remaining_stamina < 1060 )); then
+      break
+    fi
+  done
+}
+
+function captain::explore::stone() {
+  local remaining_stamina
+  remaining_stamina="$(explore::get_current_stamina)"
+
+  # TODO do u wanna explore to exhaustion for a resource or until out of stamina
+  while (( $(item_obj::inventory "stone") < (FARMRPG_MAX_INVENTORY-100) )); do
+    remaining_stamina="$(explore::one --apple_cider --item "stone")"
+    craft_max "glass_bottle"
+    craft_max "cooking_pot"
+    craft_max "magicite"
+    explore::shed "magicite"
+    if (( remaining_stamina < 1060 )); then
+      break
+    fi
+  done
+}
+
+function captain::explore::forest() {
+  local remaining_stamina
+  remaining_stamina="$(explore::get_current_stamina)"
+
+  # craftworks "board" "wood_plank"
+
+  while (( remaining_stamina > 1060 )); do
+    if (( $(item_obj::inventory "stone") < (100) )); then
+      captain::explore::stone
+    fi
+    while (( $(item_obj::inventory "oak") < (100) )); do
+      local i_have
+      i_have=$(item_obj::inventory "oak")
+      log::info "Getting some oak for crossbow | i_have='$i_have' i_want='100'"
+      remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek" 2>/dev/null)"
+      if ! (( remaining_stamina > 1060 )); then
+        return
+      fi
+    done
+
+    remaining_stamina="$(explore::one --apple_cider --loc "forest")"
+    craft_max "leather"
+    craft_max "crossbow"
+    # craft_max "mushroom_paste" && craft::use_paste
+    craft_max "twine"
+    craft_max "rope"
+    craft_max "fishing_net"
+    craft_max "large_net"
+    explore::shed "wood"
+  done
+
+  # Use remaining stamina on just exploring
+  log::info "Using remaining stamina to explore whispering_creek"
+  explore --loc "forest"
+}
+
+function captain::explore::whispering_creek() {
+  local remaining_stamina
+  remaining_stamina="$(explore::get_current_stamina)"
+
+  while (( remaining_stamina > 1060 )); do
+    if (( $(item_obj::inventory "stone") < (100) )); then
+      captain::explore::stone
+    fi
+    remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"
+    craft_max "apple_cider"
+    craft_max "orange_juice"
+    craft_max "lemonade"
+    craft_max "garnet"
+    craft_max "garnet_ring"
+    craft_max "iron_ring"
+    craft_max "salt"
+    craft_max "red_dye"
+    craft_max "canoe"
+    explore::shed "slimestone"
+    explore::shed "blue_gel"
+    explore::shed "red_berries"
+    explore::shed "sour_root"
+    explore::shed "thorns"
+  done
+
+  # Use remaining stamina on just exploring
+  log::info "Using remaining stamina to explore whispering_creek"
+  explore --loc "whispering_creek"
 }

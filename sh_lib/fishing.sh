@@ -77,7 +77,7 @@ function fish::net::all() {
 
   while (( num_nets > 0 )); do
     fish::net::one "pirate_s_cove" >/dev/null
-    (( --num_nets % 5 == 0 )) && fish::sell
+    (( --num_nets % 10 == 0 )) && fish::sell
   done
 }
 
@@ -145,4 +145,28 @@ function chore::fish() {
   done
 
   unset fish::_mealworm
+}
+
+################################################################################
+##################################### nets #####################################
+################################################################################
+
+function fish::nets() {
+  local count="${1:?}"
+  local loc="pirate_s_cove"
+  while (( count > 0 )); do
+    if (( $(item_obj::inventory "large_net") > 1 )); then
+      fish::net::one "$loc" >/dev/null
+      (( count -= 25 ))
+    elif (( $(item_obj::inventory "fishing_net") > 1 )); then
+      fish::net::one "$loc" >/dev/null
+      (( count -= 1 ))
+    else
+      log::err "Out of fishing nets!"
+      if ! captain::ensure_have "fishing_net" "$count"; then
+        log::err "Could not ensure we had enough fishing nets"
+        return 1
+      fi
+    fi
+  done
 }
