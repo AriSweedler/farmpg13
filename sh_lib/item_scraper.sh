@@ -66,6 +66,9 @@ function json::add_key_val() {
   log::debug "Added key with value to file | file='$file' key='$key' value='$value'"
 }
 
+# After scraping all we need to:
+# * turn "null" into null
+# * turn "{'123': 456}" into {"123": 456}
 function scrape::item::all() {
   # Get the relevant files
   local JSON_id_recipe JSON_name_id

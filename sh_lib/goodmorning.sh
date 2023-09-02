@@ -36,21 +36,13 @@ function gm::feed_pigs() {
     *) log::err "Failed to feed piggies (L)" ; return 1 ;;
   esac
 
-  # Place corn in the feeder
-  local i_have_feed i_want_feed i_macerate_corn
-  if ! i_have_feed="$(item_obj::inventory "feed")"; then
-    log::err "Could not figure out how much to donate"
-    return 1
-  fi
-  i_want_feed=$((FARMRPG_MAX_INVENTORY - 100))
-  loaded_feed=0 # TODO scrape to learn how much we have loaded already
-  i_macerate_corn=$(( (i_want_feed-i_have_feed-loaded_feed) / 2))
-  feed_mill::load corn "$i_macerate_corn"
+  # Place enough items in feeder to get back to max feed
+  feedmill::load
 }
 
 function gm::work_storehouse() {
   local output
-  if ! output="$(worker "go=work" "id=280551")"; then
+  if ! output="$(worker "go=work" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -65,7 +57,7 @@ function gm::work_storehouse() {
 
 function gm::rest_farmhouse() {
   local output
-  if ! output="$(worker "go=rest" "id=280551")"; then
+  if ! output="$(worker "go=rest" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -74,16 +66,6 @@ function gm::rest_farmhouse() {
     success) log::info "Successfully rested in the farmhouse" ;;
     *) log::err "Failed to rest in the farmhouse" ; return 1 ;;
   esac
-}
-
-function gm::spinwheel() {
-  local output
-  if ! output="$(worker "go=spinfirst")"; then
-    log::err "Failed to invoke worker"
-    return 1
-  fi
-
-  log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
 }
 
 function gm::orchard() {
@@ -208,7 +190,7 @@ function captain::goodmorning() {
   gm::fishing
 
   # Town stuff
-  gm::spinwheel
+  spinwheel "3"
   gm::wishing_well "salt" # spiked_shell
   #vault::crack
 

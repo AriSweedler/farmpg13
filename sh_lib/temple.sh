@@ -27,11 +27,10 @@ function temple::sacrifice_item() {
 }
 
 function captain::temple() {
-  while (( $(item_obj::inventory "watermelon") < 900 )); do
-    captain::ensure_have watermelon 500
+  while (( $(item_obj::inventory "eggplant") < 900 )); do
+    captain::ensure_have eggplant 500
     log::info "Donating"
-    temple::sacrifice_item "Watermelon"
-    temple::sacrifice_item "Yellow Watermelon"
+    temple::sacrifice_item "Eggplant"
     log::info "Nice donation"
   done
 }

@@ -65,7 +65,7 @@ def decode_chore_to_action(chore, status):
   elif chore == 'Crack open The Vault':
     return ':' # No-op - this will get accomplished normally
   elif chore == 'Spin the Wheel of Borgen':
-    return ':' # No-op - this will get accomplished normally
+    return 'spinwheel {target}'
   elif len(words) > 3 and f'{words[0]} {words[1]} {words[3]}' == 'Manually Catch Fish':
     return f'chore::fish {words[2]}'
 

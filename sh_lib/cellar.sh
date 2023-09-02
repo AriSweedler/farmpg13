@@ -1,10 +1,10 @@
 function page::cellar() {
-  farmpg13::page "cellar.php?id=280551"
+  farmpg13::page "cellar.php?id=$FARMRPG_MY_ID"
 }
 
 function cellar::store_wine::one() {
   local output
-  if ! output="$(worker "go=storewine" "id=280551")"; then
+  if ! output="$(worker "go=storewine" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi

@@ -27,7 +27,7 @@ function eat() {
 
 function drink::grape_juice() {
   local output
-  if ! output="$(worker "go=drinkgj" "id=280551")"; then
+  if ! output="$(worker "go=drinkgj" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi

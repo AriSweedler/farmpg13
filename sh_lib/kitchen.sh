@@ -112,5 +112,5 @@ function cook::onion_soup() {
 }
 
 function cook::cats_meow() {
-  cook::_impl "cat’s_meow" "6000"
+  cook::_impl "cat's_meow" "6000"
 }

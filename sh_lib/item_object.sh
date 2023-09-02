@@ -86,7 +86,7 @@ function item_obj::num() {
     return 1
   fi
   if [ "$num" == "null" ]; then
-    log::err "Could not turn item into number | num='$num'"
+    log::err "Could not turn item into number | num='$num' | item_obj='$item_obj'"
     return 1
   fi
 

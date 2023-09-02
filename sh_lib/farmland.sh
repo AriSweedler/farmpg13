@@ -35,7 +35,7 @@ function farm::set_seed() {
 
 function harvest() {
   local output
-  if ! output="$(worker "go=harvestall" "id=280551")"; then
+  if ! output="$(worker "go=harvestall" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -59,7 +59,7 @@ function plant() {
 
   # Do work
   local output planted_item grow_time
-  if ! output="$(worker "go=plantall" "id=280551")"; then
+  if ! output="$(worker "go=plantall" "id=$FARMRPG_MY_ID")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
