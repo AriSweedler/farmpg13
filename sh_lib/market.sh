@@ -102,7 +102,7 @@ function _sale_decision() {
     *_seeds |*_spores | apple | orange | lemon | grapes | eggs | milk | minnows \
     | gummy_worms | worms | board | iron | nails | rope | twine | steel | broom \
     | glass_bottle | iron_ring | straw | wood | coal | stone | sandstone | blue_feathers \
-    | feathers | blue_dye | bottle_rocket | bird_egg | flour | pepper | potato \
+    | feathers | blue_dye | bottle_rocket | bird_egg | flour | peppers | potato \
     | tomato | green_diary | horseshoe | red_twine | sturdy_box | sweet_root \
     | thorns | white_parchment | mealworms | mushroom | mushroom_paste | slimestone \
     | steel_wire | grubs | carrot | eggplant | hops | leek | onion | 4-leaf_clover \

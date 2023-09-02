@@ -40,18 +40,18 @@ function craft() {
 }
 
 function craft_max() {
-  local -r item="${1:?}"
+  local -r item_name="${1:?}"
   local item_nr
-  item_nr="$(item_obj::num "$item")"
-  log::info "Trying to craft | item='$item/$item_nr'"
+  item_nr="$(item_obj::num "$item_name")"
+  log::info "Trying to craft | item='$item_name/$item_nr'"
 
   # Fetch recipe
-  local -r recipe="$(jq -c -r '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"
+  local -r recipe="$(item_obj::recipe "$item_name")"
   if [ "$recipe" == "null" ]; then
     log::err "No recipe for this item"
     return 1
   fi
-  log::debug "We know how to craft item | item='$item' item_nr='$item_nr' recipe='$recipe'"
+  log::debug "We know how to craft item | item_name='$item_name' item_nr='$item_nr' recipe='$recipe'"
 
   local -r count="$(python3 << EOF
 # Load all the data into python
@@ -80,13 +80,13 @@ print(int(max(0, ans)))
 EOF
 )"
   if (( count == 0 )); then
-    log::debug "Cannot craft any | item='$item' count='$count'"
+    log::debug "Cannot craft any | item_name='$item_name' count='$count'"
     return 0
   fi
-  log::debug "Trying to craft as many as we can | item='$item' count='$count'"
+  log::debug "Trying to craft as many as we can | item_name='$item_name' count='$count'"
 
   # Do work
-  if craft "${item:?}" "${count:?}"; then
+  if craft "${item_name:?}" "${count:?}"; then
     craft_max "$@"
   fi
   return 0

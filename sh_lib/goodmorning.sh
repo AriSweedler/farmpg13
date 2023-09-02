@@ -106,7 +106,6 @@ function gm::items() {
   craft_max "iron_ring"
   craft_max "cooking_pot"
   craft_max "white_parchment"
-  craft_max "toilet_paper"
   craft_max "inferno_sphere"
   craft_max "lava_sphere"
   craft_max "red_dye"

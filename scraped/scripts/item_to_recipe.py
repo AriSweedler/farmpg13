@@ -1,9 +1,5 @@
-# Get a recipe by piping the HTML from an item's page through this script
-#
-# Example:
-#
-#     ./bin/cli item 72 | python3 scrape_explore/recipe.py
-#
+# Get an item's recipe
+# Pipe HTML from an item's page through this script
 from bs4 import BeautifulSoup
 import json
 import sys
@@ -15,7 +11,7 @@ soup = BeautifulSoup(html_content, "html.parser")
 crafting_recipe_div = soup.find(lambda tag: tag.text == "Crafting Recipe")
 if crafting_recipe_div == None:
     print("null")
-    exit(1)
+    exit(0)
 
 # Get the chunk of elements that contain the recipe entries
 list_block_div = crafting_recipe_div.find_next_sibling("div", class_="list-block")

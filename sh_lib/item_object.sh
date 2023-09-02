@@ -200,10 +200,13 @@ function item_obj::recipe() {
     return 1
   fi
 
-  if ! jq --exit-status --compact-output --raw-output '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json"; then
+  if ! output="$(jq --exit-status --compact-output --raw-output '.["'"$item_nr"'"]' "./scraped/item_number_to_recipe.json")"; then
     log::err "Failed to find recipe for item | item='$item_obj/$item_nr'"
     return 1
   fi
+
+  # Returnl
+  echo "$output" | tr "'" '"'
 }
 
 function item_obj::inventory() {
@@ -332,7 +335,7 @@ function _is_key_in_json_file() {
 
 function _echo_short_crops() {
   local crops=(
-    pepper
+    peppers
     carrot
     peas
     cucumber
@@ -382,7 +385,7 @@ function _echo_mega_crops() {
 
 function _echo_gold_crops() {
   local crops=(
-    gold_pepper
+    gold_peppers
     gold_carrot
     gold_cucumber
     gold_eggplant

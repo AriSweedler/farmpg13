@@ -44,12 +44,3 @@ function farmpg13::page() {
 function page::panel_crops() {
   farmpg13::page "panel_crops.php?cachebuster=380824"
 }
-
-# Used to get the:
-# * recipe when piped to 'scraped/scripts/recipe.py'
-# * name when piped to 'scraped/scripts/item.sh'
-function page::item() {
-  local -r item_id="${1:?Item id}"
-  log::info "Getting page for item | item_id='$item_id'"
-  farmpg13::page "item.php?id=$item_id"
-}
