@@ -93,7 +93,7 @@ EOF
 }
 
 function craftworks() {
-  craftworks::remove_all
+  craftworks::remove_all || return 1
 
   # Iterate through input and make them all part of craftwords
   local item_name item_obj item_nr
@@ -114,7 +114,7 @@ function craftworks() {
     # Do work
     item_obj::craftworks::add "$item_obj"
   done
-  craftworks::play_all
+  craftworks::play_all || return 1
 }
 
 function craftworks::remove_all() {

@@ -226,7 +226,7 @@ function captain::crop() {
 }
 
 function captain::paste() {
-  craftworks "mushroom_paste" "twine"
+  craftworks "mushroom_paste" "twine" || return 1
   desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
   captain::ensure_have "mushroom" "$desired_count"
   # TODO figure out how to spend extra mushroom paste on crafting all the mushroom paste items...
