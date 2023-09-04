@@ -193,7 +193,6 @@ function captain::goodmorning() {
   gm::work_storehouse
   gm::rest_farmhouse
   captain::cellar
-  mastery::claim
 
   # Use and replenish items
   gm::orchard

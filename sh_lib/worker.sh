@@ -87,6 +87,7 @@ function worker::action::is_mutating() {
     givemailitem |\
     harvestall |\
     loadfeedmill |\
+    openitem |\
     plantall |\
     playallcw |\
     sacrificeitem |\
