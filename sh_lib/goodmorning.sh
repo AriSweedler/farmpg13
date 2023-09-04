@@ -210,3 +210,10 @@ function captain::goodmorning() {
   mastery::claim::all
   captain::chores
 }
+
+function captain::goodnight() {
+  captain::paste
+  craftworks "twine" "rope"
+  captain::crop
+  captain::temple
+}
