@@ -7,14 +7,6 @@ function page::item() {
   farmpg13::page "item.php?id=$item_id"
 }
 
-# Run this to update:
-# * item_number_to_recipe.json
-# * item_to_number.json
-function scrape::item::everything() {
-  log::err "TODO"
-  return 1
-}
-
 # Input: $item_id
 # Output: echo "$item_name;$recipe"
 function scrape::item::one() {
@@ -51,12 +43,25 @@ function json::add_key_val() {
     return 1
   fi
 
-  # Use jq to add the key-value pair to the JSON file
-  if ! jq \
-    --arg k "$key" --arg v "$value" \
-    '. + { ($k): $v }' \
-    < "$file" > "$file.new"; then
-    # The jq command failed
+  # Use jq to add the key-value pair to the JSON file. Support
+  # 1) null
+  # 2) objects
+  # 3) regular strings
+  if [ "$value" == "null" ]; then
+    jq --arg k "$key" \
+      '. + { ($k): null }' \
+      < "$file" > "$file.new"
+  elif grep -q '{' <<< "$value"; then
+    jq --arg k "$key" --arg v "$(echo "$value" | tr "'" '"')" \
+      '. + { ($k): $v|fromjson }' \
+      < "$file" > "$file.new"
+  else
+    jq --arg k "$key" --arg v "$value" \
+      '. + { ($k): $v }' \
+      < "$file" > "$file.new"
+  fi
+  local rc=$?
+  if (( rc != 0 )); then
     log::err "jq command to add kv to json failed"
     return 1
   fi
@@ -66,9 +71,9 @@ function json::add_key_val() {
   log::debug "Added key with value to file | file='$file' key='$key' value='$value'"
 }
 
-# After scraping all we need to:
-# * turn "null" into null
-# * turn "{'123': 456}" into {"123": 456}
+# Run this to update:
+# * item_number_to_recipe.json
+# * item_to_number.json
 function scrape::item::all() {
   # Get the relevant files
   local JSON_id_recipe JSON_name_id

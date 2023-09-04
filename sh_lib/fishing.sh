@@ -131,16 +131,21 @@ function chore::fish() {
       *fishcnt*)
         local caught
         caught="$(echo "$output" | grep -o 'itemimg. ><br/>.*<span' | awk -F'[><]' '{print $4}')"
-        log::info "Fished with a mealworm | caught='$caught'"
+        log::debug "Fished with a mealworm | caught='$caught'"
+        log::info "Fished with a mealworm"
         ;;
       "") log::err "Failed to fish with a mealworm | output='$output'" ; return 1;;
     esac
   }
 
+  # Parse args
   local count="${1:?}"
+
+  # Set state
+  fish::selectbait "Mealworms"
+
+  # Do work
   while (( count-- > 0 )); do
-    # Set state
-    fish::selectbait "Mealworms"
     fish::_mealworm "farm_pond"
   done
 

@@ -58,6 +58,7 @@ function item::new::planted() {
   case "$normz" in
     hop) normz="hops" ;;
     pea) normz="peas" ;;
+    pepper) normz="peppers" ;;
     radishe) normz="radish" ;;
   esac
 
@@ -105,6 +106,7 @@ function item_obj::seed() {
   # Special case the weird ones
   case "$item_obj" in
     mushroom) ans="mushroom_spores" ;;
+    peppers) ans="pepper_seeds" ;;
     peas) ans="pea_seeds" ;;
     gold_peas) ans="gold_pea_seeds" ;;
     pine_tree) ans="pine_seeds" ;;
@@ -178,7 +180,6 @@ function item_obj::procure_method() {
   fi
 
   if item_obj::is_explorable "$item_obj"; then
-    # TODO what items do we wanna explore_cider for?
     echo "explore"
     return
   fi
@@ -262,6 +263,35 @@ function item_obj::as_bait() {
     worms) echo "Worms" ;;
     *) return 1 ;;
   esac
+}
+
+function item_obj::get_fishing_location() {
+  local -r item_obj="$(item::new::name "${1:?Give an item name to fish for}")"
+
+  local item_nr
+  if ! item_nr="$(item_obj::num "$item_obj")"; then
+    log::err "Failed to get number for item | item='$item_obj'"
+    return 1
+  fi
+
+  if ! item_obj::is_fishable; then
+    log::err "Item is not fishable | item_obj='$item_obj'"
+    return 1
+  fi
+
+  local loc
+  if ! loc="$(jq -r '.["'"$item_nr"'"]' <<< "./scraped/fish_to_location.json")"; then
+    log::err "Could not figure out where to fish | item_obj='$item_obj' item_nr='$item_nr'"
+    return 1
+  fi
+
+  if [ "$loc" == "null" ]; then
+    log::debug "There is no key in inventory | key='$item_nr' item_obj='$item_obj'"
+    return 1
+  fi
+
+  # Return success
+  echo "$loc"
 }
 ################################################################################
 ################################ classification ################################

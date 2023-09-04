@@ -53,9 +53,9 @@ function cellar::sell_wine::all() {
 }
 
 function captain::cellar() {
-  log::info "Selling all wine worth max value | max_wine_value='$FARMRPG_MAX_WINE_SILVER'"
+  log::info "Selling all wine worth max value {{{ | max_wine_value='$FARMRPG_MAX_WINE_SILVER'"
   cellar::sell_wine::all
   log::info "Making sure we have max win in cellar | max_wine='$FARMRPG_MAX_WINE'"
   cellar::store_wine::all
-  log::info "Celler is in optimal state"
+  log::info "Celler is in optimal state }}}"
 }

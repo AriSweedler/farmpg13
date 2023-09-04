@@ -47,7 +47,7 @@ function sell() {
     log::err "Sold for 0 ? | output='$output' output='$output'"
     return 1
   elif [ "$output" == "error" ]; then
-    log::err "Failed to sell | output='$output'"
+    log::err "Failed to sell | item='$1/$item_id' quantity='$quantity' output='$output'"
     return 1
   else
     log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"

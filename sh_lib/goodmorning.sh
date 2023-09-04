@@ -35,9 +35,6 @@ function gm::feed_pigs() {
     success) log::info "Successfully fed all the pigs OwO" ;;
     *) log::err "Failed to feed piggies (L)" ; return 1 ;;
   esac
-
-  # Place enough items in feeder to get back to max feed
-  feedmill::load
 }
 
 function gm::work_storehouse() {
@@ -174,15 +171,29 @@ function gm::friends() {
   friendship::buddy
 }
 
+function captain::pigs() {
+  # TODO:
+  # Buy max pigs
+  # Figure out how many pigs we can sell (respect inventory)
+  # Sell bacon
+
+  # Feed all the pigs
+  gm::feed_pigs
+
+  # Place enough items in feeder to get back to max feed
+  feedmill::load
+}
+
 function captain::goodmorning() {
   # Farm stuff
   gm::pet_chickens
   gm::pet_cows
-  gm::feed_pigs
+  captain::pigs
   gm::raptors
   gm::work_storehouse
   gm::rest_farmhouse
   captain::cellar
+  mastery::claim
 
   # Use and replenish items
   gm::orchard

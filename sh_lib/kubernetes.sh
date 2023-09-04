@@ -16,7 +16,7 @@ function captain::ensure_have() {
 
   # Massage and validate args
   if (( i_want > FARMRPG_MAX_INVENTORY )); then
-    # TODO better options here?
+    # TODO BETTER_CRAFT_MAX better options here?
     log::warn "We cannot ask for more than the max inventory | i_want='$i_want' FARMRPG_MAX_INVENTORY='$FARMRPG_MAX_INVENTORY'"
     i_want="$FARMRPG_MAX_INVENTORY"
   fi
@@ -141,7 +141,7 @@ function captain::_delegate::farm_gj() {
 function captain::_delegate::craft() {
   # Ensure we have enough materials to craft this object
   captain::_delegate::_fetch_recipe
-  # TODO we may not be able to craft as many as we want at once - use recipe fetching to craft less than needed? Or do crafting math....
+  # TODO BETTER_CRAFT_MAX we may not be able to craft as many as we want at once - use recipe fetching to craft less than needed? Or do crafting math....
 
   # Craft
   local i_get_more
@@ -199,9 +199,13 @@ function captain::_delegate::explore_cider() {
 
 # TODO
 function captain::_delegate::fish() {
-  log::warn "Not implemented yet"
-  log::dev "Implement me (API fishing? Large nets?)"
-  fish --item "$item_obj"
+  # Figure out where to fish
+  local loc
+  loc="$(item_obj::get_fishing_location "$item_obj")"
+
+  # We *could* API fish with mealworms, but instead... just:
+  # Cast a net there
+  fish::net::one "$loc"
 }
 
 ################################################################################
@@ -216,7 +220,7 @@ function captain::crop() {
   for crop_obj in "${crops[@]}"; do
     # Determine how many we need to have to stop growing this crop
     desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - $FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-    if [ "$crop_obj" == "mushroom" ]; then # TODO write a "max desired" function for MEGA crops and include mushrooms in it
+    if [ "$crop_obj" == "mushroom" ]; then # TODO BETTER_CRAFT_MAX write a "max desired" function for MEGA crops and include mushrooms in it
       desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
     fi
 
@@ -226,33 +230,39 @@ function captain::crop() {
 }
 
 function captain::paste() {
+  local paste_items
+  paste_items=(
+    "amber_cane"
+    "aquamarine_ring"
+    "axe"
+    "canoe"
+    "emerald_ring"
+    "fancy_drum"
+    "fancy_guitar"
+    "garnet_ring"
+    "green_diary"
+    "hourglass"
+    "leather_diary"
+    "lemon_quartz_ring"
+    "mystic_ring"
+    "purple_diary"
+    "ruby_ring"
+    "shimmer_ring"
+    "shovel"
+    "sturdy_bow"
+    "sturdy_sword"
+  )
+
+  # Put mushroom_paste in the craftworks and grow a bunch of mushrooms. Try to
+  # spend all the paste, then grow some more.
   craftworks "mushroom_paste" "twine" || return 1
   desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-  captain::ensure_have "mushroom" "$desired_count"
-  # TODO figure out how to spend extra mushroom paste on crafting all the mushroom paste items...
-  # * some are for optimal resource use (maximize gem value - paste is worht 500 added silverg)
-  # * others are for holding (always have max shovels axes spoons etc)
-  # * And still others are for selling (create and sell canoe)
-  #
-  # amber_cane
-  # garnet_ring
-  # aquamarine_ring
-  # axe
-  # canoe
-  # emerald_ring
-  # fancy_drum
-  # fancy_guitar
-  # green_diary
-  # purple_diary
-  # leather_diary
-  # hourglass
-  # lemon_quartz_ring
-  # mystic_ring
-  # ruby_ring
-  # shimmer_ring
-  # shovel
-  # sturdy_bow
-  # sturdy_sword
+  while (( $(item_obj::inventory "mushroom") < desired_count )); do
+    captain::ensure_have "mushroom" "$desired_count"
+    for pi in "${paste_items[@]}"; do
+      craft_max "$pi"
+    done
+  done
 }
 
 function captain::nets() {
