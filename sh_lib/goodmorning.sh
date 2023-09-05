@@ -208,6 +208,9 @@ function captain::goodmorning() {
   gm::friends
   mastery::claim::all
   captain::chores
+
+  # Finish
+  log::info "All done with goodmorning!"
 }
 
 function captain::goodnight() {

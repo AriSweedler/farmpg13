@@ -40,7 +40,7 @@ def decode_chore_to_action(chore, status):
   # print(f'{chore=} {progress=} {target=} {directive=}')
   if directive == 'Drink Orange Juice':
     return f'drink::orange_juices {remaining}'
-  if directive == 'Drink Lemonade':
+  elif directive == 'Drink Lemonade':
     return f'drink::lemonades {remaining}'
   elif directive == 'Eat Apples':
     return f'eat::apples {remaining}'
@@ -50,6 +50,10 @@ def decode_chore_to_action(chore, status):
     return f'sell eggs {remaining}'
   elif directive == 'Cast Fishing Nets':
     return f'fish::nets {remaining}'
+  elif directive == 'Harvest Plant':
+    return f'chore::plant {remaining}'
+  elif directive == 'Plant Seeds':
+    return f'chore::plant {remaining}'
   elif directive == 'Use Stamina':
     return ':' # No-op - this will get accomplished normally
   elif directive == 'Toss Items into Well':
@@ -155,12 +159,12 @@ function chores::work() {
       "" | Unknown)
         rc=1
         log::warn "Not sure how to accomplish chore | chore='$chore'"
-        continue
+        return 1
         ;;
       ":")
         rc=2
         log::warn "We must wait to accomplish the chore | chore='$chore'"
-        continue
+        return 1
         ;;
       *)
         log::info "To accomplish chore we do | chore='$chore' action='$action'"
@@ -169,6 +173,7 @@ function chores::work() {
         fi
         ;;
     esac
+    break
   done
   return $rc
   ) # Reset the IFS
@@ -177,11 +182,12 @@ function chores::work() {
 function captain::chores() {
   # One pass to accomplish as many chores as possible, exiting early if we are
   # done, and a secone pass to claim all the chores we just accomplished
-  for _ in 1 2; do
-    if chores::work; then
-      log::info "Chores are all completed! :)"
-      return
+  for _ in {1..10}; do
+    if ! chores::work; then
+      log::warn "Failed a chore"
+      break
     fi
+    log::info "Chores are all completed! :)"
   done
 
   log::warn "There are more chores to accomplish"

@@ -27,6 +27,7 @@ function buy() {
 
 function sell() {
   # Parse args
+  # TODO validate that this is an item_obj
   if ! item_id="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1

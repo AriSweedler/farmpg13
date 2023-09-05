@@ -186,3 +186,21 @@ def do_work():
 print(do_work())
 "
 }
+
+function chore::plant() {
+  local remaining="${1:?}"
+
+  local i_have_peppers
+  if ! i_have_peppers="$(item_obj::inventory "peppers")"; then
+    log::err "Could not figure out how much peppers we have"
+    return 1
+  fi
+
+  # Sell some peppers off if we have too many - we can't bust over the
+  # inventory cap so we will have to sell some off so we can harvest
+  local desired_have_peppers=$(( FARMRPG_MAX_INVENTORY - FARMRPG_PLOTS - remaining ))
+  if (( i_have_peppers > desired_have_peppers)); then
+    sell "peppers" $(( i_have_peppers - desired_have_peppers ))
+  fi
+  captain::ensure_have "peppers" "$desired_have_peppers"
+}
