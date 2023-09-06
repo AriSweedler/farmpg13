@@ -50,16 +50,14 @@ def decode_chore_to_action(chore, status):
     return f'sell eggs {remaining}'
   elif directive == 'Cast Fishing Nets':
     return f'fish::nets {remaining}'
-  elif directive == 'Harvest Plant':
+  elif directive == 'Harvest Crops':
     return f'chore::plant {remaining}'
   elif directive == 'Plant Seeds':
     return f'chore::plant {remaining}'
   elif directive == 'Use Stamina':
     return ':' # No-op - this will get accomplished normally
   elif directive == 'Toss Items into Well':
-    return ':' # No-op - this will get accomplished normally
-  elif directive == 'Harvest Crops':
-    return ':' # No-op - this will get accomplished normally
+    return f'gm::wishing_well {remaining}'
   elif chore == 'Stir a Meal':
     return 'cook::bone_broth'
   elif chore == 'Taste a Meal':

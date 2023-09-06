@@ -102,6 +102,7 @@ function worker::action::is_mutating() {
     addcwitem |\
     claimdaily |\
     claimmastery |\
+    depositsilver |\
     incuallraptors |\
     petallchickens |\
     petallcows |\
@@ -114,6 +115,7 @@ function worker::action::is_mutating() {
     stirmeal |\
     tastemeal |\
     trycrackcode |\
+    withdrawalsilver |\
     work) return 1 ;;
 
     *) log::warn "Unknown action, cannot determine if we should update the inventory cache or not | action='$action'"
