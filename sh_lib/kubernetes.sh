@@ -257,7 +257,7 @@ function captain::paste() {
   # spend all the paste, then grow some more.
   craftworks "mushroom_paste" "twine" || return 1
   desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-  while (( $(item_obj::inventory "mushroom") < desired_count )); do
+  while (( "$(item_obj::inventory "mushroom")" < desired_count )); do
     captain::ensure_have "mushroom" "$desired_count"
     for pi in "${paste_items[@]}"; do
       craft_max "$pi"

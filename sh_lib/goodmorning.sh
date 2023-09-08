@@ -24,19 +24,6 @@ function gm::pet_cows() {
   esac
 }
 
-function gm::feed_pigs() {
-  local output
-  if ! output="$(worker "go=feedallpigs")"; then
-    log::err "Failed to invoke worker"
-    return 1
-  fi
-
-  case "$output" in
-    success) log::info "Successfully fed all the pigs OwO" ;;
-    *) log::err "Failed to feed piggies (L)" ; return 1 ;;
-  esac
-}
-
 function gm::work_storehouse() {
   local output
   if ! output="$(worker "go=work" "id=$FARMRPG_MY_ID")"; then
@@ -91,6 +78,9 @@ function gm::items() {
   craft_max "red_shield"
   sell_max "red_shield"
   sell_max "steak_kabob"
+
+  sell::all_but_one "inferno_sphere"
+  sell::all_but_one "lava_sphere"
 }
 
 function gm::items::money() {
@@ -171,19 +161,6 @@ function gm::friends() {
   friendship::buddy
 }
 
-function captain::pigs() {
-  # TODO:
-  # Buy max pigs
-  # Figure out how many pigs we can sell (respect inventory)
-  # Sell bacon
-
-  # Feed all the pigs
-  gm::feed_pigs
-
-  # Place enough items in feeder to get back to max feed
-  feedmill::load
-}
-
 function captain::goodmorning() {
   # Farm stuff
   gm::pet_chickens
@@ -206,6 +183,7 @@ function captain::goodmorning() {
 
   # misc
   gm::friends
+  bank::manager
   mastery::claim::all
   captain::chores
 

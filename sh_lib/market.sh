@@ -98,6 +98,22 @@ function sell_cap() {
   log::info "Inventory is looking good!"
 }
 
+function sell::all_but_one() {
+  local item_name item_obj
+  item_name="${1:?}"
+  if ! item_obj="$(item::new::name "$item_name")"; then
+    log::err "Could not convert name to obj | item_name='$item_name'"
+    return 1
+  fi
+
+  local i_have
+  if ! i_have="$(item_obj::inventory "$item_obj")"; then
+    log::err "Could not figure out how much feed we have"
+    return 1
+  fi
+  sell "$item_obj" $((i_have-1))
+}
+
 function _sale_decision() {
   case "$1" in
     *_seeds |*_spores | apple | orange | lemon | grapes | eggs | milk | minnows \

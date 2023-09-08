@@ -145,50 +145,51 @@ function chores::claim() {
 }
 
 function chores::work() {
+  local x=$RANDOM
+  local skip="${1:?}"
   ( IFS=$'\n'       # Set the Internal Field Separator to newline
-  local rc=0
   for chore_action in $(page::chores | bs4_helper::chores::desired_action); do
+    log::dev "We got ca | chore_action='$chore_action/$x'"
     # Destructure output of desired action into chores and actions
-    IFS=';' read -r chore action <<< "$chore_action"
+    IFS=';' read -r chore action <<< "$chore_action/$x"
     # Split the action into an array that can be run as a command
     IFS=' ' read -ra cmd <<< "$action"
 
     case "$action" in
       "" | Unknown)
-        rc=1
         log::warn "Not sure how to accomplish chore | chore='$chore'"
         return 1
         ;;
       ":")
-        rc=2
         log::warn "We must wait to accomplish the chore | chore='$chore'"
-        return 1
+        return 2
         ;;
       *)
         log::info "To accomplish chore we do | chore='$chore' action='$action'"
         if ! "${cmd[@]}"; then
-          rc=3
+          log::dev "ca failed | chore_action='$chore_action/$x'"
+          return 3
         fi
+        log::dev "ca succeeded | chore_action='$chore_action/$x'"
+        return 40 # success - but there are more chores to do
         ;;
     esac
-    break
   done
-  return $rc
   ) # Reset the IFS
+  return 0 # Done with chores
 }
 
 function captain::chores() {
-  # One pass to accomplish as many chores as possible, exiting early if we are
-  # done, and a secone pass to claim all the chores we just accomplished
+  local skip=0
   for _ in {1..10}; do
-    if ! chores::work; then
-      log::warn "Failed a chore"
-      break
-    fi
-    log::info "Chores are all completed! :)"
+    log::dev "chore outer loop | val=$((++val))"
+    chores::work "$skip"
+    case "$?" in
+      0) log::info "Finished all chores :)" ; return ;;
+      1|2|3) log::warn "Failed a chore | skip='$skip'"; ((skip++)) ;;
+      40) log::dev "Made chore progress" ;;
+    esac
   done
-
-  log::warn "There are more chores to accomplish"
 }
 
 function chores::debug() {

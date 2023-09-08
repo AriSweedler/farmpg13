@@ -215,6 +215,8 @@ function item_management::reagent() {
 # \endcode
 function item_management::explored() {
   local loc="${1:?}"
+  log::info "Crafting up all the items we explored for {{{ | loc='$loc'"
+
   case "$loc" in
     whispering_creek)
       item_management::craft "apple" "apple_cider"
@@ -253,7 +255,10 @@ function item_management::explored() {
       item_management::explored "ember_lagoon"
       item_management::explored "forest"
       ;;
+    *) log::warn "Unknown how to deal with items from | loc='$loc'" ;;
   esac
+
+  log::info "Crafted all the items we explored for }}}"
 }
 
 ################################################################################
@@ -325,7 +330,9 @@ function captain::explore::xp() {
   fish::selectbait "Mealworms"
 
   while true; do
+    log::info "Going for an explore::xp cycle | mw_count='$mw_count' {{{"
     # Use all the stamina
+    #explore::exhaust_and_craft "jundland_desert"
     explore::exhaust_and_craft "whispering_creek"
 
     # Find how many mw's we have
@@ -342,6 +349,7 @@ function captain::explore::xp() {
     for _ in {1..40}; do
       fish::_mealworm "farm_pond"
     done
+    log::info "We have gone for an explore::xp cycle for }}}"
   done
 
   # And loop
@@ -355,10 +363,19 @@ function explore::exhaust_and_craft() {
   # Parse args
   local loc="${1:?Location to explore}"
 
+  log::info "Starting this exhaust_and_craft session {{{ | loc='$loc'"
+  explore::exhaust "$loc"
+  item_management::explored "$loc"
+  log::info "Finished this exhaust_and_craft session }}}"
+}
+
+function explore::exhaust() {
+  local loc="${1:?Location to explore}"
+
   # Read initial state
   local remaining_stamina
   remaining_stamina="$(explore::get_current_stamina)"
-  log::info "Starting this exhaust_and_craft session with stamina {{{ | remaining_stamina='$remaining_stamina'"
+  log::info "Exploring with stamina {{{ | remaining_stamina='$remaining_stamina'"
 
   # Explore with ciders for as much as we can
   local cider_count STAMINA_FOR_CIDER=1060
@@ -373,7 +390,5 @@ function explore::exhaust_and_craft() {
   # Finish it off with regular explores, crafting, and logging
   log::info "We do not have enough stamina for cider. Falling back to regular exploring | remaining_stamina='$remaining_stamina'"
   explore --loc "$loc"
-  log::info "Crafting up all the items we explored for"
-  item_management::explored "$loc"
-  log::info "Finished this exhaust_and_craft session }}}"
+  log::info "Exploring done }}}"
 }

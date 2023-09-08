@@ -115,6 +115,8 @@ function craftworks() {
     item_obj::craftworks::add "$item_obj"
   done
   craftworks::play_all || return 1
+
+  sleep 1
 }
 
 function craftworks::remove_all() {
