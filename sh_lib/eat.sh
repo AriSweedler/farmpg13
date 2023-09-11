@@ -179,6 +179,7 @@ function drink::orange_juices() {
     drink::orange_juice::one
     (( count -= 1 ))
   done
+  (( count == 0 )) && return
 }
 
 ################################################################################
@@ -209,4 +210,42 @@ function drink::lemonades() {
     drink::arnold_palmer "whispering_creek"
     (( count -= 20 ))
   done
+}
+
+################################################################################
+################################## apple cider #################################
+################################################################################
+
+function drink::apple_cider() {
+  log::info "Drinking apple cider for chores. Maybe this is just to spend stamina {{{"
+
+  local need_to_drink="${1:?}"
+  if ! captain::ensure_have "apple_cider" "$need_to_drink"; then
+    log::err "Could not confirm that we have apple cider }}}"
+    return 1
+  fi
+
+  # Ensure we have enough stam
+  local remaining_stamina necessary_stamina stam_used_per_ac num_ojs
+  remaining_stamina="$(explore::get_current_stamina)"
+  # Not 1000, because of perks
+  stam_used_per_ac=720
+  # When we drink the last cider we need at least 1060 stam, so we try to have
+  # 1200 stam at this point (instead of a perfect 720)
+  necessary_stamina="$(( stam_used_per_ac*need_to_drink +  (1200-stam_used_per_ac) ))"
+  num_ojs=$(( (necessary_stamina - remaining_stamina) / 100 ))
+  drink::orange_juices "$num_ojs"
+  remaining_stamina="$(explore::get_current_stamina)"
+  log::info "We need some stuff | necessary_stamina='$necessary_stamina' remaining_stamina='$remaining_stamina' num_ojs='$num_ojs'"
+
+  # Drink all the ciders
+  while (( need_to_drink-- > 0 )); do
+    if (( remaining_stamina < 1060 )); then
+      drink::orange_juices 1
+    fi
+    remaining_stamina="$(explore::one --apple_cider --loc "whispering_creek")"
+    item_management::explored "whispering_creek"
+  done
+
+  log::info "Successfully drank as much apple cider as we needed to }}}"
 }

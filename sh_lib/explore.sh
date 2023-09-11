@@ -53,7 +53,7 @@ function explore::one() {
   local remaining_stamina
   remaining_stamina="$(awk -F'[<>]' '/<div id="explorestam">/{print $3}' <<< "$output" | tr -d ',')"
   log::debug "Explored successfully | location='$explore_loc_num' remaining_stamina='$remaining_stamina'"
-  log::info "Explored successfully | loc='$loc' args='${args[*]}'"
+  log::info "Explored successfully | loc='$loc' args='$(echo "${args[*]}" | tr '\n' ' ')'"
 
   if [ -z "$remaining_stamina" ] && [ "$drink_cider" == "true" ]; then
     log::warn "Not enough stamina to use an apple cider | output='$output'"
@@ -243,7 +243,7 @@ function item_management::explored() {
     forest)
       item_management::craft "hide" "leather"
       item_management::craft "arrowhead" "crossbow"
-      item_management::craft "mushroom_paste"
+      item_management::craft "mushroom" "mushroom_paste"
       item_management::craft "straw" "twine"
       item_management::craft "twine" "rope"
       item_management::craft "antler" "fishing_net"

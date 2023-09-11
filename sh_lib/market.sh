@@ -114,6 +114,32 @@ function sell::all_but_one() {
   sell "$item_obj" $((i_have-1))
 }
 
+function sell::make_space() {
+  local item_name item_obj
+  item_name="${1:?}"
+  if ! item_obj="$(item::new::name "$item_name")"; then
+    log::err "Could not convert name to obj | item_name='$item_name'"
+    return 1
+  fi
+
+  local incoming="${2:?How many empty inv spaces do we need}"
+
+  local i_have
+  if ! i_have="$(item_obj::inventory "$item_obj")"; then
+    log::err "Could not figure out how much feed we have"
+    return 1
+  fi
+
+  local desired_amount to_sell
+  desired_amount=$(( FARMRPG_MAX_INVENTORY - incoming ))
+  to_sell=$(( i_have - desired_amount ))
+  log::debug "Selling item to make sure we have empty spaces | item_obj='$item_obj' empty_space='$incoming' i_have='$i_have' desired_amount='$desired_amount' to_sell='$to_sell'"
+  if (( to_sell > 0 )); then
+    sell "$item_obj" "$to_sell"
+  fi
+  log::info "We have enough inventory space for additional amt of item | item_obj='$item_obj' amt='$incoming'"
+}
+
 function _sale_decision() {
   case "$1" in
     *_seeds |*_spores | apple | orange | lemon | grapes | eggs | milk | minnows \

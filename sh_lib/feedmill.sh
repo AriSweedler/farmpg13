@@ -31,6 +31,7 @@ function feedmill::load::_item() {
     local -r crop="${1:?Crop to encode}"
     case "$crop" in
       corn) echo "45865425578" ;;
+      cabbage) echo "45815410471" ;;
       broccoli) echo "45853160650" ;;
       *) log::err "Not a feedable crop (or we do not know the id)" ;;
     esac
@@ -65,9 +66,9 @@ function feedmill::_choose_item() {
   if (( i_need_feed > 24 )); then
     local need_broccoli=$((i_need_feed / 24))
     echo "broccoli;$need_broccoli;24"
-  elif (( i_need_feed > 2 )); then
-    local need_corn=$((i_need_feed / 2))
-    echo "corn;$need_corn;2"
+  elif (( i_need_feed > 4 )); then
+    local need_cabbage=$((i_need_feed / 4))
+    echo "cabbage;$need_cabbage;4"
   else
     log::err "We do not need any more feed"
     return 1

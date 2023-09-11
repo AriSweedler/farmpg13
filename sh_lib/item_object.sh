@@ -391,11 +391,11 @@ function _echo_short_crops() {
 function _echo_long_crops() {
   local crops=(
     wheat
-    broccoli
     cotton
     sunflower
-    beet
     rice
+    beet
+    broccoli
   )
   for c in "${crops[@]}"; do
     echo "$c"

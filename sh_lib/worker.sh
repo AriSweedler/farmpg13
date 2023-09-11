@@ -76,6 +76,7 @@ function worker::action::is_mutating() {
     craftitem |\
     donatecomm |\
     drinkgj |\
+    drinklm |\
     drinkoj |\
     drinkojs |\
     drinkxojs |\
@@ -104,6 +105,7 @@ function worker::action::is_mutating() {
     claimmastery |\
     depositsilver |\
     incuallraptors |\
+    massaddpigs |\
     petallchickens |\
     petallcows |\
     removeallcw |\
@@ -112,6 +114,7 @@ function worker::action::is_mutating() {
     selectbait |\
     sellwine |\
     setfarmseedcounts |\
+    slallpigs |\
     stirmeal |\
     tastemeal |\
     trycrackcode |\

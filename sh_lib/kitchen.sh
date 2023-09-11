@@ -15,7 +15,6 @@ function cook::put_in_oven() {
     log::err "Failed to invoke worker"
     return 1
   fi
-  log::info "Put a meal in the oven | meal='$item' output='$output'"
 }
 
 function cook::loop::stir() {
@@ -68,6 +67,22 @@ function cook::collect() {
   esac
 }
 
+function cook::_get_open_oven() {
+  farmpg13::page "kitchen.php" | python3 -c "
+from bs4 import BeautifulSoup
+import sys
+
+def get_empty_oven(html_content):
+  soup = BeautifulSoup(html_content, 'html.parser')
+  for div in soup.find_all(class_='item-title'):
+    if 'Empty' in div.get_text():
+      return div.find('span').get_text().strip().strip('Oven #')
+  exit(1)
+
+print(get_empty_oven(sys.stdin.read()))
+"
+}
+
 # Cooking event loop
 function cook::_impl() {
   # Parse args
@@ -75,13 +90,16 @@ function cook::_impl() {
   local -r recipe_wait_time="${2:?How long does it take to cook in seconds with optimal stirring}"
 
   # Figure args out
-  function cook::_get_open_oven() {
-    echo "1"
-  }
-  local -r oven_nr="$(cook::_get_open_oven)"
+  local oven_nr
+  if ! oven_nr="$(cook::_get_open_oven)"; then
+    log::err "Cannot cook now - there are no open ovens"
+    log::warn "Perhaps we should wait"
+    return 1
+  fi
 
   # Start doing work
-  cook::put_in_oven "$recipe" "$oven_nr"
+  cook::put_in_oven "$recipe" "$oven_nr" || return $?
+  log::info "Put a meal in the oven {{{ | meal='$recipe' oven='$oven_nr' output='$output'"
   sleep 2
 
   # Set up background jobs to stir, taste, and season. Clean these jobs up, too
@@ -91,14 +109,17 @@ function cook::_impl() {
   killers=( "${killers[@]}" $! )
   ( sleep 300 && cook::loop::season "$oven_nr" ) &
   killers=( "${killers[@]}" $! )
+
+  (
   # shellcheck disable=SC2064
-  trap "kill ${killers[*]}" RETURN EXIT SIGINT
+  trap "xargs -L1 kill <<< ${killers[*]}" RETURN EXIT SIGINT
 
   # Main job will wait until the meal is ready to collect. Trap will clean up
   # all the child jobs
   sleep "$recipe_wait_time"
+  )
   cook::collect "$oven_nr"
-  log::info "Finished working on cooking | recipe='$recipe'"
+  log::info "Finished working on cooking }}} | recipe='$recipe'"
 }
 
 ############################## cook specific meals #############################

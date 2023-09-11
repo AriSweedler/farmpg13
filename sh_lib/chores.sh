@@ -42,6 +42,8 @@ def decode_chore_to_action(chore, status):
     return f'drink::orange_juices {remaining}'
   elif directive == 'Drink Lemonade':
     return f'drink::lemonades {remaining}'
+  elif directive == 'Drink Apple Cider':
+    return f'drink::apple_cider {remaining}'
   elif directive == 'Eat Apples':
     return f'eat::apples {remaining}'
   elif directive == 'Open Items at Locksmith':
@@ -55,7 +57,7 @@ def decode_chore_to_action(chore, status):
   elif directive == 'Plant Seeds':
     return f'chore::plant {remaining}'
   elif directive == 'Use Stamina':
-    return ':' # No-op - this will get accomplished normally
+    return f'drink::apple_cider {int(remaining/500)}'
   elif directive == 'Toss Items into Well':
     return f'gm::wishing_well {remaining}'
   elif chore == 'Stir a Meal':
@@ -145,51 +147,63 @@ function chores::claim() {
 }
 
 function chores::work() {
-  local x=$RANDOM
   local skip="${1:?}"
   ( IFS=$'\n'       # Set the Internal Field Separator to newline
   for chore_action in $(page::chores | bs4_helper::chores::desired_action); do
-    log::dev "We got ca | chore_action='$chore_action/$x'"
+    if (( skip-- > 0 )); then
+      log::warn "We could not figure out how to do this chore, skipping | skip='$chore_action'"
+      continue
+    fi
+
+    local x=$RANDOM
+    log::debug "We got chore_action | chore_action='$chore_action' LOOP_ID='$x'"
     # Destructure output of desired action into chores and actions
-    IFS=';' read -r chore action <<< "$chore_action/$x"
+    IFS=';' read -r chore action <<< "$chore_action"
     # Split the action into an array that can be run as a command
     IFS=' ' read -ra cmd <<< "$action"
 
     case "$action" in
       "" | Unknown)
         log::warn "Not sure how to accomplish chore | chore='$chore'"
-        return 1
+        return 1 # Fail - we should add support for this chore
         ;;
       ":")
         log::warn "We must wait to accomplish the chore | chore='$chore'"
-        return 2
+        return 2 # Fail - is this true?
         ;;
       *)
         log::info "To accomplish chore we do | chore='$chore' action='$action'"
         if ! "${cmd[@]}"; then
-          log::dev "ca failed | chore_action='$chore_action/$x'"
-          return 3
+          log::debug "chore_action failed | chore_action='$chore_action' LOOP_ID='$x'"
+          return 3 # Fail
         fi
-        log::dev "ca succeeded | chore_action='$chore_action/$x'"
+        log::debug "chore_action succeeded | chore_action='$chore_action' LOOP_ID='$x'"
         return 40 # success - but there are more chores to do
         ;;
     esac
   done
-  ) # Reset the IFS
   return 0 # Done with chores
+  ) # Reset the IFS
+  return $? # Forward the return value of the subshell
 }
 
 function captain::chores() {
   local skip=0
   for _ in {1..10}; do
-    log::dev "chore outer loop | val=$((++val))"
+    log::debug "chore outer loop | val=$((++val))"
     chores::work "$skip"
     case "$?" in
-      0) log::info "Finished all chores :)" ; return ;;
-      1|2|3) log::warn "Failed a chore | skip='$skip'"; ((skip++)) ;;
-      40) log::dev "Made chore progress" ;;
+      0) log::info "No more chores for use to look at!"; break ;;
+      1|2|3) ((skip++)); log::warn "Failed a chore | skip='$skip'" ;;
+      40) log::debug "Made chore progress" ;;
     esac
   done
+
+  if (( skip == 0 )); then
+    log::info "Finished all chores :)"
+  else
+    log::err "Could not complete all chores, look in the logs for what we had to skip"
+  fi
 }
 
 function chores::debug() {

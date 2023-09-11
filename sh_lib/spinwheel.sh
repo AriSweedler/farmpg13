@@ -29,7 +29,16 @@ function spinwheel::one() {
     return 1
   fi
 
-  log::info "Wheel spin results: '$(tr '\n' ' ' <<< "$output")'"
+  # 8|You got:<br/><img src='/img/items/7264.png?1' class='itemimg'><br/>Mug of Beer (x13)
+  # -->
+  # Mug of Beer (x13)
+  local reward
+  reward="$(echo "$output" \
+    | awk -F'|' '{print $2}' \
+    | sed 's|<br/>|\n|g' \
+    | awk 'NR == 3' \
+    | sed 's|\s\+$||')"
+  log::info "Wheel spin results | reward='$reward'"
 }
 
 
