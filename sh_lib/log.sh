@@ -1,4 +1,4 @@
-LOGFILE="farmpg13.log"
+LOGFILE="log/farmpg13.log"
 function log::err() {
   log::_impl --level "err" -- "$@"
 }
@@ -68,6 +68,16 @@ function log::_impl() {
     printf "%s" "$*"
     printf "$(log::_color "clear")\n"
   )"
+
+  # Rotate the log if it is getting too big.
+  # Create the .log file after this
+  # Keep .1.old - .5.old as backups
+  if [ -s "$LOGFILE" ] && (( $(wc -l "$LOGFILE" | awk '{print $1}') > 10000 )); then
+    mv "$LOGFILE" "$LOGFILE.0.old"
+    for i in {4..0}; do
+      mv "$LOGFILE.$i.old" "$LOGFILE.$((i+1)).old"
+    done
+  fi
 
   # Handle the log
   echo "$log_msg" | _remove_ansii >> "$LOGFILE"

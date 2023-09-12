@@ -61,11 +61,11 @@ def decode_chore_to_action(chore, status):
   elif directive == 'Toss Items into Well':
     return f'gm::wishing_well {remaining}'
   elif chore == 'Stir a Meal':
-    return 'cook::bone_broth'
+    return 'chore::cook'
   elif chore == 'Taste a Meal':
-    return f'cook::bone_broth'
+    return f'chore::cook'
   elif chore == 'Season a Meal':
-    return f'cook::bone_broth'
+    return f'chore::cook'
   elif chore == 'Crack open The Vault':
     return ':' # No-op - this will get accomplished normally
   elif chore == 'Spin the Wheel of Borgen':
