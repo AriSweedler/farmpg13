@@ -351,11 +351,6 @@ function captain::explore::xp() {
     done
     log::info "We have gone for an explore::xp cycle for }}}"
   done
-
-  # And loop
-  log::info "Sleeping for an hour then running this again"
-  sleep $((60*60))
-  captain::explore::xp
 }
 
 # Explore until exhaustion. Don't void any items

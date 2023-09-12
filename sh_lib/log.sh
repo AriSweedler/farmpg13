@@ -75,7 +75,7 @@ function log::_impl() {
   if [ -s "$LOGFILE" ] && (( $(wc -l "$LOGFILE" | awk '{print $1}') > 10000 )); then
     mv "$LOGFILE" "$LOGFILE.0.old"
     for i in {4..0}; do
-      mv "$LOGFILE.$i.old" "$LOGFILE.$((i+1)).old"
+      mv "$LOGFILE.$i.old" "$LOGFILE.$((i+1)).old" &>/dev/null
     done
   fi
 

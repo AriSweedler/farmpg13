@@ -273,3 +273,39 @@ function captain::nets() {
   craft_max "large_net"
   fish::net::all
 }
+
+# shellcheck disable=SC1102,SC2086
+captain::kuber() {
+  local now ts_loop_time sleep_seconds
+  now=$(date +'%s')
+  ts_loop_time=$now
+  local next_ts_explore=0 next_ts_cook=0 MINUTES="* 60"
+  while true; do
+    # If now is before our ts_loop_time time then we sleep
+    now=$(date +'%s')
+    log::dev "[KUBER] Now | now='$now' ts_loop_time='$ts_loop_time'"
+    if (( now < ts_loop_time )); then
+      sleep_seconds=$(( ts_loop_time - now ))
+      log::dev "[KUBER] Sleeping | sleep_seconds='$sleep_seconds'"
+      sleep "$sleep_seconds"
+    fi
+    ts_loop_time=$(( ts_loop_time + 1 $MINUTES ))
+
+    # Run this every 20 minutes
+    # If now is after our next_ts_explore time then we explore
+    now=$(date +'%s')
+    if (( now > next_ts_explore )); then
+      next_ts_explore=$(( now + 20 $MINUTES ))
+      log::dev "[KUBER] Explore | next_ts_explore='$next_ts_explore'"
+      captain::explore::xp
+    fi
+
+    # Run this every 2 minutes
+    now=$(date +'%s')
+    if (( now > next_ts_cook )); then
+      next_ts_cook=$(( now + 2 $MINUTES ))
+      log::dev "[KUBER] Cook | next_ts_cook='$next_ts_cook'"
+      captain::cook
+    fi
+  done
+}
