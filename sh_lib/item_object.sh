@@ -206,7 +206,7 @@ function item_obj::recipe() {
     return 1
   fi
 
-  # Returnl
+  # Return
   echo "$output" | tr "'" '"'
 }
 
@@ -310,6 +310,9 @@ function item_obj::is_craftable() {
   local item_obj item_nr
   item_obj="${1:?}"
   item_nr="$(item_obj::num "$item_obj")"
+  if _is_key_in_json_file "$item_nr" "./scraped/crafting_denylist.json"; then
+    return 1
+  fi
   _is_key_in_json_file "$item_nr" "./scraped/item_number_to_recipe.json"
 }
 

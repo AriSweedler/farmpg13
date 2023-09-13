@@ -35,3 +35,47 @@ function inventory::update_max_inventory() {
   to='_default_env "FARMRPG_MAX_INVENTORY" '"$FARMRPG_MAX_INVENTORY"
   sed -i '' "s/$from/$to/" sh_lib/globals.sh
 }
+
+function dashboard::inventory() {
+  cmts=(
+    "mushroom_paste"
+    "scissors"
+    "axe"
+    "hammer"
+
+    "coal"
+    "black_powder"
+
+    "straw"
+    "twine"
+    "rope"
+    "yarn"
+    "fishing_net"
+    "large_net"
+
+    "wood"
+    "ladder"
+    "sturdy_bow"
+    "sturdy_box"
+    "sturdy_shield"
+    "treasure_chest"
+    "wagon_wheel"
+    "wooden_barrel"
+    "wooden_box"
+    "wooden_shield"
+    "wooden_sword"
+    "wooden_table"
+
+    "fancy_guitar"
+    "fancy_pipe"
+    "wrench"
+  )
+  for item in "${cmts[@]}"; do
+    count="$(item_obj::inventory "$item")"
+    if (( count+20 > FARMRPG_MAX_INVENTORY )); then
+      log::warn "You have count of item | item='$item' count='$count'"
+    else
+      log::info "You have count of item | item='$item' count='$count'"
+    fi
+  done
+}

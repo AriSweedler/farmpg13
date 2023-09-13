@@ -43,15 +43,15 @@ function craft_max() {
   local -r item_name="${1:?}"
   local item_nr
   item_nr="$(item_obj::num "$item_name")"
-  log::info "Trying to craft | item='$item_name/$item_nr'"
+  log::debug "[CRAFT] [MAX] Trying to craft | item='$item_name/$item_nr'"
 
   # Fetch recipe
   local -r recipe="$(item_obj::recipe "$item_name")"
   if [ "$recipe" == "null" ]; then
-    log::err "No recipe for this item"
+    log::err "[CRAFT] [MAX] No recipe for this item"
     return 1
   fi
-  log::debug "We know how to craft item | item_name='$item_name' item_nr='$item_nr' recipe='$recipe'"
+  log::debug "[CRAFT] [MAX] We know how to craft item | item_name='$item_name' item_nr='$item_nr' recipe='$recipe'"
 
   local -r count="$(python3 << EOF
 # Load all the data into python
@@ -80,16 +80,56 @@ print(int(max(0, ans)))
 EOF
 )"
   if (( count == 0 )); then
-    log::debug "Cannot craft any | item_name='$item_name' count='$count'"
-    return 0
+    log::debug "[CRAFT] [MAX] Cannot craft any | item_name='$item_name' count='$count'"
+    return 1
   fi
-  log::debug "Trying to craft as many as we can | item_name='$item_name' count='$count'"
+  log::debug "[CRAFT] [MAX] Trying to craft as many as we can | item_name='$item_name' count='$count'"
 
   # Do work
   if craft "${item_name:?}" "${count:?}"; then
     craft_max "$@"
   fi
   return 0
+}
+
+function craft_max::tree() {
+  # Parse args
+  local item_obj
+  if ! item_obj="$(item::new::name "$1")"; then
+    log::err "[CRAFT] [MAX TREE] Argument was not an item name"
+    return 1
+  fi
+
+  # Exit early
+  if ! item_obj::is_craftable "$item_obj"; then
+    log::debug "[CRAFT] [MAX TREE] This item is not craftable | item='$item_obj/$item_nr'"
+    return 1
+  fi
+
+  local item_nr
+  item_nr="$(item_obj::num "$item_obj")"
+  log::info "[CRAFT] [MAX TREE] Start {{{ | item='$item_obj/$item_nr'"
+
+  # Recurse to craft all the children, craft as many of us as we can.
+  # Repeat this until we make no more of us
+  local ritem_obj ritem_nr
+  local -r recipe="$(item_obj::recipe "$item_obj")"
+  while true; do
+    # Craft max tree on all child objects
+    for ritem_nr in $(jq -r 'keys[]' <<< "$recipe"); do
+      ritem_obj="$(item::new::number "$ritem_nr")"
+      craft_max::tree "$ritem_obj"
+    done
+
+    # Keep running this loop while we're making more
+    if craft_max "$item_obj"; then
+      continue
+    fi
+
+    # Terminate
+    log::info "[CRAFT] [MAX TREE] Crafted as much as possible }}} | item='$item_obj'"
+    return
+  done
 }
 
 function craftworks() {
@@ -178,13 +218,57 @@ function item_obj::craftworks::add() {
 }
 
 function craft::use_paste() {
-  craft_max "hammer"
-  craft_max "shovel"
-  craft_max "canoe"
-  craft_max "fancy_guitar"
-  craft_max "garnet_ring"
-  craft_max "axe"
-  craft_max "leather_diary"
-  craft_max "purple_diary"
-  craft_max "green_diary"
+  craft_max::tree "hammer"
+  craft_max::tree "shovel"
+  craft_max::tree "canoe"
+  craft_max::tree "fancy_guitar"
+  craft_max::tree "garnet_ring"
+  craft_max::tree "axe"
+  craft_max::tree "leather_diary"
+  craft_max::tree "purple_diary"
+  craft_max::tree "green_diary"
+}
+
+function captain::workshop() {
+  log::info "[CAPTAIN] Workshop {{{"
+  cmts_priority=(
+    "rope"
+    "wooden_box"
+  )
+  cmts=(
+    "mushroom_paste"
+    "large_net"
+    "black_powder"
+    "cooking_pot"
+    "fancy_guitar"
+    "fancy_pipe"
+    "ladder"
+    "wooden_shield"
+    "rope"
+    "scissors"
+    "axe"
+    "hammer"
+    "sturdy_bow"
+    "sturdy_box"
+    "sturdy_shield"
+    "treasure_chest"
+    "wagon_wheel"
+    "wooden_barrel"
+    "wooden_box"
+    "wooden_shield"
+    "wooden_sword"
+    "wooden_table"
+    "wrench"
+    "yarn"
+  )
+  inventory::clear_cache
+  for item in "${cmts_priority[@]}"; do
+    craft_max::tree "$item"
+  done
+  for item in "${cmts[@]}"; do
+    if (( RANDOM % 6 == 0 )); then
+      craft_max::tree "$item"
+    fi
+  done
+  log::info "[CAPTAIN] Workshop }}}"
 }

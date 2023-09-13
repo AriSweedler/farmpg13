@@ -96,7 +96,7 @@ function feedmill::load() {
   local i_need_feed
   projected_feed=$(( i_have_feed + feed_processing ))
   i_need_feed=$((FARMRPG_MAX_INVENTORY - projected_feed - 20))
-  if (( i_need_feed < 2 )); then
+  if (( i_need_feed <= 4 )); then
     log::info "We do not need any more feed! }}} | i_have_feed='$i_have_feed' feed_processing='$feed_processing'"
     return
   else
@@ -105,7 +105,7 @@ function feedmill::load() {
 
   # Do work while there is work to be done
   local item_obj amt feed_per_item
-  while (( i_need_feed > 2 )); do
+  while (( i_need_feed > 4 )); do
     if ! feed_descriptor="$(feedmill::_choose_item)"; then
       log::err "Could not figure out what feed item to choose }}} | i_need_feed='$i_need_feed'"
       return 1

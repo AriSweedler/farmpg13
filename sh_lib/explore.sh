@@ -166,7 +166,7 @@ function item_management::craft() {
   fi
 
   # Figure out how many to sell and sell them
-  craft_max "$cm_item_obj"
+  craft_max::tree "$cm_item_obj"
 }
 
 ##
@@ -198,7 +198,7 @@ function item_management::reagent() {
   fi
 
   # Do work
-  craft_max "$item_obj"
+  craft_max::tree "$item_obj"
 }
 
 ##
@@ -349,7 +349,7 @@ function captain::explore::xp() {
     for _ in {1..40}; do
       fish::_mealworm "farm_pond"
     done
-    log::info "We have gone for an explore::xp cycle for }}}"
+    log::info "We have gone for an explore::xp cycle }}}"
   done
 }
 

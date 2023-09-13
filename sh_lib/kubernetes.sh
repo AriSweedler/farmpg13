@@ -212,6 +212,10 @@ function captain::_delegate::fish() {
 ############################# convenience functions ############################
 ################################################################################
 
+# Currently, this is supposed to be left on
+#
+# TODO change it to wanna run every minute. We will check if stuff needs to be
+# harvested and such
 function captain::crop() {
   local crops
   read -ra crops <<< "$(_echo_long_crops | tr '\n' ' ') $(_echo_short_crops | tr '\n' ' ')"
@@ -220,12 +224,14 @@ function captain::crop() {
   for crop_obj in "${crops[@]}"; do
     # Determine how many we need to have to stop growing this crop
     desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - $FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-    if [ "$crop_obj" == "mushroom" ]; then # TODO BETTER_CRAFT_MAX write a "max desired" function for MEGA crops and include mushrooms in it
-      desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
+    desired_count_mega=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
+    if item_obj::is_crop::mega "$crop_obj"; then
+      desired_count=$desired_count_mega
     fi
 
     # Grow until we have enough
     captain::ensure_have "$crop_obj" "$desired_count"
+    captain::ensure_have "mushroom" "$desired_count_mega"
   done
 }
 
@@ -260,17 +266,13 @@ function captain::paste() {
   while (( "$(item_obj::inventory "mushroom")" < desired_count )); do
     captain::ensure_have "mushroom" "$desired_count"
     for pi in "${paste_items[@]}"; do
-      craft_max "$pi"
+      craft_max::tree "$pi"
     done
   done
 }
 
 function captain::nets() {
-  craft_max "twine"
-  craft_max "rope"
-  craft_max "fishing_net"
-  craft_max "iron_ring"
-  craft_max "large_net"
+  craft_max::tree "large_net"
   fish::net::all
 }
 
@@ -279,14 +281,15 @@ captain::kuber() {
   local now ts_loop_time sleep_seconds
   now=$(date +'%s')
   ts_loop_time=$now
-  local next_ts_explore=0 next_ts_cook=0 MINUTES="* 60"
+  local next_ts_explore=0 next_ts_cook=0 next_ts_workshop=0 next_ts_gm=0
+  local MINUTES="* 60" HOURS="* 60 * 60"
   while true; do
     # If now is before our ts_loop_time time then we sleep
     now=$(date +'%s')
-    log::dev "[KUBER] Now | now='$now' ts_loop_time='$ts_loop_time'"
+    log::debug "[KUBER] Now | now='$now' ts_loop_time='$ts_loop_time'"
     if (( now < ts_loop_time )); then
       sleep_seconds=$(( ts_loop_time - now ))
-      log::dev "[KUBER] Sleeping | sleep_seconds='$sleep_seconds'"
+      log::debug "[KUBER] Sleeping | sleep_seconds='$sleep_seconds'"
       sleep "$sleep_seconds"
     fi
     ts_loop_time=$(( ts_loop_time + 1 $MINUTES ))
@@ -296,7 +299,7 @@ captain::kuber() {
     now=$(date +'%s')
     if (( now > next_ts_explore )); then
       next_ts_explore=$(( now + 20 $MINUTES ))
-      log::dev "[KUBER] Explore | next_ts_explore='$next_ts_explore'"
+      log::debug "[KUBER] Explore | next_ts_explore='$next_ts_explore'"
       captain::explore::xp
     fi
 
@@ -304,8 +307,24 @@ captain::kuber() {
     now=$(date +'%s')
     if (( now > next_ts_cook )); then
       next_ts_cook=$(( now + 2 $MINUTES ))
-      log::dev "[KUBER] Cook | next_ts_cook='$next_ts_cook'"
+      log::debug "[KUBER] Cook | next_ts_cook='$next_ts_cook'"
       captain::cook
+    fi
+
+    # Run this every 10 min
+    now=$(date +'%s')
+    if (( now > next_ts_workshop )); then
+      next_ts_workshop=$(( now + 10 $MINUTES ))
+      log::debug "[KUBER] Workshop crafting | next_ts_workshop='$next_ts_workshop'"
+      captain::workshop
+    fi
+
+    # Run this once a day
+    now=$(date +'%s')
+    if (( now > next_ts_gm )); then
+      next_ts_gm=$(( now + 24 $HOURS ))
+      log::debug "[KUBER] Goodmorning | next_ts_gm='$next_ts_gm'"
+      captain::goodmorning
     fi
   done
 }

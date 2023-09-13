@@ -145,6 +145,8 @@ function pigs::purchase::max() {
 }
 
 function captain::pigs() {
+  log::info "[CAPTAIN] [Pigs] Start {{{"
+
   # Buy max pigs
   pigs::purchase::max
 
@@ -152,7 +154,7 @@ function captain::pigs() {
   ( IFS=$'\n'       # Set the Internal Field Separator to newline
   for action in $(page::pigs | bs4_helper::pigs::get_slaughter_cmds); do
     IFS=' ' read -ra cmd <<< "$action"
-    log::info "Taking captain::pig action | action='$action'"
+    log::info "[CAPTAIN] [Pigs] [slaughter] Taking action | action='$action'"
     "${cmd[@]}"
   done
   )
@@ -162,4 +164,7 @@ function captain::pigs() {
 
   # Place enough items in feeder to get back to max feed
   feedmill::load
+
+  # Return success
+  log::info "[CAPTAIN] [Pigs] End }}}"
 }

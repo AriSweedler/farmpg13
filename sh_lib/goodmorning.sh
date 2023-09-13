@@ -54,44 +54,27 @@ function gm::rest_farmhouse() {
 
 function gm::orchard() {
   # Craft for the orchard
-  craft_max "glass_orb"
-  craft_max "glass_bottle"
-  craft_max "apple_cider"
-  craft_max "orange_juice"
-  craft_max "lemonade"
-  craft_max "arnold_palmer"
-  craft_max "grape_juice"
-  craft_max "wine"
+  craft_max::tree "apple_cider"
+  craft_max::tree "orange_juice"
+  craft_max::tree "lemonade"
+  craft_max::tree "arnold_palmer"
+  craft_max::tree "grape_juice"
 }
 
 function gm::items() {
   # Pets
   collect_pet_items
 
-  craft_max "twine"
-  craft_max "iron_ring"
-  craft_max "cooking_pot"
-  craft_max "white_parchment"
-  craft_max "inferno_sphere"
-  craft_max "lava_sphere"
-  craft_max "red_dye"
-  craft_max "red_shield"
+  craft_max::tree "large_net"
+  craft_max::tree "white_parchment"
+  craft_max::tree "inferno_sphere"
+  craft_max::tree "lava_sphere"
+  craft_max::tree "red_shield"
+
   sell_max "red_shield"
   sell_max "steak_kabob"
-
   sell::all_but_one "inferno_sphere"
   sell::all_but_one "lava_sphere"
-}
-
-function gm::items::money() {
-  craft_max "sturdy_bow"
-  craft_max "sturdy_shield"
-  craft_max "fancy_pipe"
-  craft_max "lantern"
-  sell_max "sturdy_bow"
-  sell_max "sturdy_shield"
-  sell_max "fancy_pipe"
-  sell_max "lantern"
 }
 
 function gm::raptors() {
@@ -145,16 +128,6 @@ function gm::wishing_well() {
   esac
 }
 
-function gm::fishing() {
-  craft_max "twine"
-  craft_max "rope"
-  craft_max "fishing_net"
-  craft_max "large_net"
-  craft_max "iron_ring"
-  craft_max "twine"
-  craft_max "rope"
-}
-
 function gm::friends() {
   friendship::thomas
   friendship::roomba
@@ -163,18 +136,20 @@ function gm::friends() {
 
 function captain::goodmorning() {
   # Farm stuff
+  if ! gm::work_storehouse; then
+    log::err "[CAPTAIN] [goodmorning] Looks like you've already had a good morning >:("
+    return
+  fi
   gm::pet_chickens
   gm::pet_cows
   captain::pigs
   gm::raptors
-  gm::work_storehouse
   gm::rest_farmhouse
   captain::cellar
 
   # Use and replenish items
   gm::orchard
   gm::items
-  gm::fishing
 
   # Town stuff
   spinwheel "3"

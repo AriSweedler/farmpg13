@@ -71,6 +71,15 @@ function temple::sacrifice_item() {
 function captain::temple() {
   while true; do
     captain::ensure_have potato 500
+################################################################################
+    # We run in an infinite loop here. So we just wanna make sure that things
+    # we're using (for crafting and cooking and such) don't run out
+    #
+    # TODO make 'temple' a kuber action.
+    # TODO make 'captain::crop' a kuber action - choose what to plant.
+    captain::ensure_have mushroom 800
+    captain::ensure_have onion 1200
+################################################################################
     log::info "Donating"
     temple::sacrifice_item "Potato" || return $?
     log::info "Nice donation"
