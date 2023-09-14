@@ -72,7 +72,7 @@ function gm::items() {
   craft_max::tree "red_shield"
 
   sell_max "red_shield"
-  sell_max "steak_kabob"
+  # sell_max "steak_kabob"
   sell::all_but_one "inferno_sphere"
   sell::all_but_one "lava_sphere"
 }

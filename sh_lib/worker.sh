@@ -82,6 +82,7 @@ function worker::action::is_mutating() {
     drinkxojs |\
     eatapple |\
     eatxapples |\
+    exchtradeaccept |\
     explore |\
     feedallpigs |\
     fishcaught |\
@@ -103,6 +104,7 @@ function worker::action::is_mutating() {
     addcwitem |\
     claimdaily |\
     claimmastery |\
+    convertxps |\
     depositsilver |\
     incuallraptors |\
     massaddpigs |\

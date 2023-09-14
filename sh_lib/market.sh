@@ -148,7 +148,7 @@ function _sale_decision() {
     | feathers | blue_dye | bottle_rocket | bird_egg | flour | peppers | potato \
     | tomato | green_diary | horseshoe | red_twine | sturdy_box | sweet_root \
     | thorns | white_parchment | mealworms | mushroom | mushroom_paste | slimestone \
-    | steel_wire | grubs | carrot | eggplant | hops | leek | onion | 4-leaf_clover \
+    | steel_wire | grubs | carrot | eggplant | hops | leek | onion | 4_leaf_clover \
     | ruby | spoon | axe | arrowhead | blue_gel | bucket | essence_of_slime | feed \
     | hammer | red_berries | cabbage | yarn | steak | chum | butter_churn ) echo "keep" ;;
 

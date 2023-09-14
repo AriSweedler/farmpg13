@@ -300,7 +300,7 @@ captain::kuber() {
     if (( now > next_ts_explore )); then
       next_ts_explore=$(( now + 20 $MINUTES ))
       log::debug "[KUBER] Explore | next_ts_explore='$next_ts_explore'"
-      captain::explore::xp
+      captain::explore::xp # TODO don't just explore XP, but actually decide where to go
     fi
 
     # Run this every 2 minutes
@@ -318,6 +318,12 @@ captain::kuber() {
       log::debug "[KUBER] Workshop crafting | next_ts_workshop='$next_ts_workshop'"
       captain::workshop
     fi
+
+    # Run this every N minutes
+    # TODO monitor crops
+    # Like... harvest them
+    # Choose what to plant
+    # Etc.
 
     # Run this once a day
     now=$(date +'%s')

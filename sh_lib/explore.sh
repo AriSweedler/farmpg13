@@ -250,9 +250,28 @@ function item_management::explored() {
       item_management::craft "fishing_net" "large_net"
       item_management::sell "wood"
       ;;
+    misty_forest)
+      item_management::craft "wood" "wooden_box"
+      item_management::craft "mushroom" "mushroom_paste"
+      item_management::craft "fern_leaf" "green_parchment"
+      item_management::craft "fern_leaf" "green_dye"
+      item_management::craft "acorn" "acorn_butter"
+      item_management::sell "sweet_root"
+      item_management::craft "unpolished_ruby" "ruby"
+      item_management::craft "straw" "large_net"
+      item_management::craft "blue_feathers" "blue_dye"
+      item_management::sell "3_leaf_clover"
+      item_management::sell "4_leaf_clover"
+      item_management::craft "amber" "amber_cane"
+      # Shiny Beetle
+      # Pine Cone
+      # Spider
+      # Frog
+      ;;
     all)
       item_management::explored "whispering_creek"
       item_management::explored "ember_lagoon"
+      item_management::explored "misty_forest"
       item_management::explored "forest"
       ;;
     *) log::warn "Unknown how to deal with items from | loc='$loc'" ;;
@@ -315,6 +334,7 @@ function captain::explore::xp() {
     esac
   }
 
+  local explore_loc="misty_forest"
   local mw_count
   if ! mw_count="$(item_obj::inventory "mealworms")"; then
     log::err "Could not read how many mealworms we have"
@@ -322,7 +342,7 @@ function captain::explore::xp() {
   fi
   if (( mw_count < 10 )); then
     log::warn "No mealworms"
-    explore::exhaust_and_craft "whispering_creek"
+    explore::exhaust_and_craft "$explore_loc"
     return
   fi
 
@@ -333,7 +353,7 @@ function captain::explore::xp() {
     log::info "Going for an explore::xp cycle | mw_count='$mw_count' {{{"
     # Use all the stamina
     #explore::exhaust_and_craft "jundland_desert"
-    explore::exhaust_and_craft "whispering_creek"
+    explore::exhaust_and_craft "$explore_loc"
 
     # Find how many mw's we have
     if ! mw_count="$(item_obj::inventory "mealworms")"; then
