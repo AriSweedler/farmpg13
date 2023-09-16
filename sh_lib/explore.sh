@@ -248,7 +248,7 @@ function item_management::explored() {
       item_management::craft "twine" "rope"
       item_management::craft "antler" "fishing_net"
       item_management::craft "fishing_net" "large_net"
-      item_management::sell "wood"
+      item_management::craft "wood" "wooden_box"
       ;;
     misty_forest)
       item_management::craft "wood" "wooden_box"
@@ -268,10 +268,16 @@ function item_management::explored() {
       # Spider
       # Frog
       ;;
+    small_cave)
+      item_management::craft "wood" "wooden_box"
+      item_management::craft "mushroom" "mushroom_paste"
+      item_management::sell "bone"
+      ;;
     all)
       item_management::explored "whispering_creek"
       item_management::explored "ember_lagoon"
       item_management::explored "misty_forest"
+      item_management::explored "small_cave"
       item_management::explored "forest"
       ;;
     *) log::warn "Unknown how to deal with items from | loc='$loc'" ;;
@@ -334,8 +340,8 @@ function captain::explore::xp() {
     esac
   }
 
-  local explore_loc="misty_forest"
-  local mw_count
+  local explore_loc="small_cave"
+  local mw_count bone_count
   if ! mw_count="$(item_obj::inventory "mealworms")"; then
     log::err "Could not read how many mealworms we have"
     return 1
@@ -370,6 +376,23 @@ function captain::explore::xp() {
       fish::_mealworm "farm_pond"
     done
     log::info "We have gone for an explore::xp cycle }}}"
+
+################################################################################
+    # Re-evaluate target
+    if ! bone_count="$(item_obj::inventory "bone")"; then
+      log::err "Could not read how many bones we have"
+      return 1
+    fi
+    if (( bone_count < 100 )); then
+      explore_loc="small_cave"
+      log::dev "setting target | bone_count='$bone_count' explore_loc='$explore_loc'"
+    elif (( bone_count > 1200 )); then
+      explore_loc="whispering_creek"
+      log::dev "setting target | bone_count='$bone_count' explore_loc='$explore_loc'"
+    else
+      log::dev "explore location remains consistent"
+    fi
+################################################################################
   done
 }
 

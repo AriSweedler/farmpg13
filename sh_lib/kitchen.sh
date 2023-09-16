@@ -209,7 +209,6 @@ function captain::cook() {
 
 function chore::cook() {
   if ! oven_nr="$(cook::_get_open_oven)"; then
-    captain::cook
     log::err "Failed to get open oven"
     return 1
   fi

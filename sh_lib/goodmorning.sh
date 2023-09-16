@@ -54,14 +54,17 @@ function gm::rest_farmhouse() {
 
 function gm::orchard() {
   # Craft for the orchard
+  log::info "Good morning, trees :) {{{"
   craft_max::tree "apple_cider"
   craft_max::tree "orange_juice"
   craft_max::tree "lemonade"
   craft_max::tree "arnold_palmer"
   craft_max::tree "grape_juice"
+  log::info "Trees have been good morninged }}}"
 }
 
 function gm::items() {
+  log::info "Good morning, items :) {{{"
   # Pets
   collect_pet_items
 
@@ -75,6 +78,7 @@ function gm::items() {
   # sell_max "steak_kabob"
   sell::all_but_one "inferno_sphere"
   sell::all_but_one "lava_sphere"
+  log::info "Items have been good morninged }}}"
 }
 
 function gm::raptors() {
@@ -128,12 +132,6 @@ function gm::wishing_well() {
   esac
 }
 
-function gm::friends() {
-  friendship::thomas
-  friendship::roomba
-  friendship::buddy
-}
-
 function captain::goodmorning() {
   # Farm stuff
   if ! gm::work_storehouse; then
@@ -157,7 +155,7 @@ function captain::goodmorning() {
   #vault::crack
 
   # misc
-  gm::friends
+  friendship::campaign
   bank::manager
   mastery::claim::all
   captain::chores

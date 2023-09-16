@@ -51,6 +51,8 @@ def butcher(staged_bacon, slom):
     bacon_per_pig = bacon_lvl(lvl)
     max_slaughterable = int(remaining_inv / bacon_per_pig)
     slaughter = min(max_slaughterable, slom[lvl])
+    if slaughter == 0:
+      continue
     remaining_inv -= slaughter * bacon_per_pig
     slaughter_cmds += f'pigs::slaughter {lvl} {slaughter}\n'
   used_inv = $FARMRPG_MAX_INVENTORY - remaining_inv

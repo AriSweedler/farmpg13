@@ -139,7 +139,7 @@ function log::_handle_prev_msg_state() {
     ans="$log_msg - repeated $((++LOG_REPEAT)) times"
     log::overwrite_last_log
   else
-    LOG_REPEAT=0
+    LOG_REPEAT=1
   fi
   printf "%s" "$LOG_REPEAT" > "$prev_msg_file.repeated"
 

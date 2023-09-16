@@ -281,7 +281,7 @@ captain::kuber() {
   local now ts_loop_time sleep_seconds
   now=$(date +'%s')
   ts_loop_time=$now
-  local next_ts_explore=0 next_ts_cook=0 next_ts_workshop=0 next_ts_gm=0
+  local next_ts_explore=0 next_ts_cook=0 next_ts_workshop=0 next_ts_gm=0 next_ts_friendship=0
   local MINUTES="* 60" HOURS="* 60 * 60"
   while true; do
     # If now is before our ts_loop_time time then we sleep
@@ -294,8 +294,15 @@ captain::kuber() {
     fi
     ts_loop_time=$(( ts_loop_time + 1 $MINUTES ))
 
+    # Run this once a day
+    now=$(date +'%s')
+    if (( now > next_ts_gm )); then
+      next_ts_gm=$(( now + 24 $HOURS ))
+      log::debug "[KUBER] Goodmorning | next_ts_gm='$next_ts_gm'"
+      captain::goodmorning
+    fi
+
     # Run this every 20 minutes
-    # If now is after our next_ts_explore time then we explore
     now=$(date +'%s')
     if (( now > next_ts_explore )); then
       next_ts_explore=$(( now + 20 $MINUTES ))
@@ -319,18 +326,18 @@ captain::kuber() {
       captain::workshop
     fi
 
+    # Run this every 10 min
+    now=$(date +'%s')
+    if (( now > next_ts_friendship )); then
+      next_ts_friendship=$(( now + 10 $MINUTES ))
+      log::debug "[KUBER] Being friendly | next_ts_friendship='$next_ts_friendship'"
+      friendship::campaign
+    fi
+
     # Run this every N minutes
     # TODO monitor crops
     # Like... harvest them
     # Choose what to plant
     # Etc.
-
-    # Run this once a day
-    now=$(date +'%s')
-    if (( now > next_ts_gm )); then
-      next_ts_gm=$(( now + 24 $HOURS ))
-      log::debug "[KUBER] Goodmorning | next_ts_gm='$next_ts_gm'"
-      captain::goodmorning
-    fi
   done
 }
