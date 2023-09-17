@@ -15,7 +15,7 @@ friendship::_give() {
   fi
 
   if (( qty <= 0 )); then
-    log::warn "Nothing to give to friend | item_obj='$item_obj' qty='$qty'"
+    log::warn "Nothing to give to friend | item_obj='$item_obj'"
     return 1
   fi
 
@@ -37,6 +37,8 @@ friendship::_give() {
 
 function friendship::buddy() {
   friendship::_give "gummy_worms" "22447"
+  # friendship::_give "pirate_bandana" "22447"
+  # friendship::_give "pirate_flag" "22447"
 }
 
 function friendship::roomba() {
@@ -45,6 +47,10 @@ function friendship::roomba() {
 
 function friendship::thomas() {
   friendship::_give "minnows" "22441"
+}
+
+function friendship::captain_thomas() {
+  friendship::_give "minnows" "71805"
 }
 
 function friendship::beatrix() {
@@ -56,9 +62,24 @@ function friendship::vincent() {
   friendship::_give "wooden_box" "22445"
 
   for useless_item in \
-    "drum" "yellow_perch" "largemouth_bass" "trout" "carp" "flier" \
-    "eggs" "grubs" "stone"; do
+    "drum" "largemouth_bass" "trout" "carp" "flier" \
+    "grubs" "stone"; do
     friendship::_give "$useless_item" "22445"
+  done
+}
+
+function friendship::star() {
+  friendship::_give "eggs" "46158"
+}
+
+function friendship::jill() {
+  friendship::_give "yellow_perch" "22444"
+}
+
+function friendship::lorn() {
+  # TODO have vincent stop taking all the stone
+  while craft_max::tree "iron_cup"; do
+    friendship::_give "iron_cup" "22446"
   done
 }
 
@@ -68,10 +89,12 @@ function friendship::vincent() {
 
 function friendship::campaign() {
   log::info "Being friendly {{{"
-  friendship::thomas
+  friendship::captain_thomas
   friendship::roomba
   friendship::buddy
   friendship::beatrix
   friendship::vincent
+  friendship::star
+  friendship::lorn
   log::info "Being friendly }}}"
 }

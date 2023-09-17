@@ -112,7 +112,7 @@ function craft_max::tree() {
 
   # Recurse to craft all the children, craft as many of us as we can.
   # Repeat this until we make no more of us
-  local ritem_obj ritem_nr
+  local rc=1 ritem_obj ritem_nr
   local -r recipe="$(item_obj::recipe "$item_obj")"
   while true; do
     # Craft max tree on all child objects
@@ -123,12 +123,13 @@ function craft_max::tree() {
 
     # Keep running this loop while we're making more
     if craft_max "$item_obj"; then
+      rc=0
       continue
     fi
 
     # Terminate
     log::info "[CRAFT] [MAX TREE] Crafted as much as possible }}} | item='$item_obj'"
-    return
+    return $rc
   done
 }
 

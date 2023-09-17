@@ -75,6 +75,14 @@ function fish::net::all() {
   fi
   log::info "We are going to use all our remaining large num_nets | num_nets='$num_nets'"
 
+  if (( num_nets > 250 )); then
+    eat "shrimp_a_plenty"
+    eat "sea_pincher_special"
+  else
+    log::warn "You have less than 250 nets, you should save until you have that and then eat the meals - each one gives you 10% more gold (it stacks by multiplying)"
+    return 1
+  fi
+
   while (( num_nets > 0 )); do
     fish::net::one "pirate_s_cove" >/dev/null
     (( --num_nets % 10 == 0 )) && fish::sell
