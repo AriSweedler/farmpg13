@@ -118,6 +118,37 @@ function item_management::sell() {
   fi
 }
 
+function item_management::friendship() {
+  # Config
+  local keep_at_least=1000
+  local give_cap=$(( FARMRPG_MAX_INVENTORY - 100 ))
+
+  # Parse args
+  local friend_mailbox_id item_name item_obj
+  friend_mailbox_id="${1:?Mailbox ID of friend}"
+  item_name="${2:?Item to shed excess of}"
+  if ! item_obj="$(item::new::name "$item_name")"; then
+    log::err "Could not convert arg to item object | arg='$1'"
+    return 1
+  fi
+
+  # Read state
+  local i_have
+  i_have="$(item_obj::inventory "$item_obj")"
+
+  # We don't have too many, just return
+  if (( i_have < give_cap )); then
+    log::debug "We have less than give_cap of item. Returning | give_cap='$give_cap' item_name='$item_name'"
+    return
+  fi
+
+  # Figure out how many to sell and sell them
+  local excess=$(( i_have - keep_at_least ))
+  if (( excess > 0 )); then
+    friendship::_give "$item_obj" "$friend_mailbox_id" "$excess"
+  fi
+}
+
 ##
 # Craft items when inventory exceeds a specified limit.
 #
@@ -273,10 +304,26 @@ function item_management::explored() {
       item_management::craft "mushroom" "mushroom_paste"
       item_management::sell "bone"
       ;;
+    black_rock_canyon)
+      item_management::sell "sandstone"
+      item_management::craft "coal" "black_powder"
+      item_management::friendship "22440" "black_powder"
+      item_management::friendship "22445" "horn"
+      item_management::craft "salt_rock" "salt"
+      item_management::sell "salt"
+      item_management::friendship "22445" "horn"
+      item_management::craft "shimmer_quartz" "shimmer_topaz"
+      item_management::craft "shimmer_topaz" "shimmer_ring"
+      item_management::friendship "22442" "giant_centipede"
+      item_management::sell "ruby_scorpion"
+      # Ancient Coin
+      # Orange Gecko
+      ;;
     all)
       item_management::explored "whispering_creek"
       item_management::explored "ember_lagoon"
       item_management::explored "misty_forest"
+      item_management::explored "black_rock_canyon"
       item_management::explored "small_cave"
       item_management::explored "forest"
       ;;
@@ -340,7 +387,7 @@ function captain::explore::xp() {
     esac
   }
 
-  local explore_loc="small_cave"
+  local explore_loc="black_rock_canyon"
   local mw_count bone_count
   if ! mw_count="$(item_obj::inventory "mealworms")"; then
     log::err "Could not read how many mealworms we have"
