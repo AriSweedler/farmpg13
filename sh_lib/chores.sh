@@ -60,6 +60,8 @@ def decode_chore_to_action(chore, status):
     return f'drink::apple_cider {int(remaining/500)}'
   elif directive == 'Toss Items into Well':
     return f'gm::wishing_well {remaining}'
+  elif directive == 'Donate Items':
+    return f'chore::donate {remaining}'
   elif chore == 'Stir a Meal':
     return 'chore::cook'
   elif chore == 'Taste a Meal':

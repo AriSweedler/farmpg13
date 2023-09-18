@@ -183,6 +183,7 @@ function captain::cook() {
   local actions action cmd
   IFS=$';' read -ra actions <<< "$(cook::_get_cooking_actions)"
   for action in "${actions[@]}"; do
+    [ "$action" == "None" ] && continue
     # Split the action into an array that can be run as a command
     read -ra cmd <<< "$action"
     if ! "${cmd[@]}"; then

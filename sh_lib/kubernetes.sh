@@ -205,7 +205,7 @@ function captain::_delegate::fish() {
 
   # We *could* API fish with mealworms, but instead... just:
   # Cast a net there
-  fish::net::one "$loc"
+  fish::net::one "$loc" &>/dev/null
 }
 
 ################################################################################

@@ -268,20 +268,14 @@ function item_obj::as_bait() {
 function item_obj::get_fishing_location() {
   local -r item_obj="$(item::new::name "${1:?Give an item name to fish for}")"
 
-  local item_nr
-  if ! item_nr="$(item_obj::num "$item_obj")"; then
-    log::err "Failed to get number for item | item='$item_obj'"
-    return 1
-  fi
-
-  if ! item_obj::is_fishable; then
+  if ! item_obj::is_fishable "$item_obj"; then
     log::err "Item is not fishable | item_obj='$item_obj'"
     return 1
   fi
 
   local loc
-  if ! loc="$(jq -r '.["'"$item_nr"'"]' <<< "./scraped/fish_to_location.json")"; then
-    log::err "Could not figure out where to fish | item_obj='$item_obj' item_nr='$item_nr'"
+  if ! loc="$(jq -r '."'"$item_obj"'"' < "./scraped/fish_to_location.json")"; then
+    log::err "Could not figure out where to fish | item_obj='$item_obj'"
     return 1
   fi
 
