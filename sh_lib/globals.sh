@@ -12,7 +12,7 @@ function _default_env() {
 }
 
 _default_env "FARMRPG_PLOTS" 36
-_default_env "FARMRPG_MAX_INVENTORY" 1430
+_default_env "FARMRPG_MAX_INVENTORY" 1442
 _default_env "FARMRPG_CRAFTING_BOOST" "1.25"
 _default_env "FARMRPG_CRAFTWORKS_SLOTS" "2"
 _default_env "FARMRPG_VAULT_GUESSES" "5"

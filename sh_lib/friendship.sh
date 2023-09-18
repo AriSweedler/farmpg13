@@ -9,9 +9,13 @@ friendship::_give() {
     log::err "Failed to get item ID"
     return 1
   fi
-  if ! qty="$(item_obj::inventory "$item_obj")"; then
-    log::err "Could not figure out how much to donate"
-    return 1
+  if [ -z "$3" ]; then
+    if ! qty="$(item_obj::inventory "$item_obj")"; then
+      log::err "Could not figure out how much to donate"
+      return 1
+    fi
+  else
+    qty="${3:?}"
   fi
 
   if (( qty <= 0 )); then
