@@ -43,7 +43,13 @@ function friendship::buddy() {
   friendship::_give "gummy_worms" "22447"
   # friendship::_give "pirate_bandana" "22447"
   # friendship::_give "pirate_flag" "22447"
+
+  for useless_item in \
+    "largemouth_bass" "trout" "carp" "flier" "stone"; do
+    friendship::_give "$useless_item" "22447"
+  done
 }
+#"drum" "grubs" "worms"
 
 function friendship::roomba() {
   friendship::_give "carbon_sphere" "71761"
@@ -62,14 +68,12 @@ function friendship::beatrix() {
 }
 
 function friendship::vincent() {
-  friendship::_give "mushroom_paste" "22445"
   friendship::_give "wooden_box" "22445"
+}
 
-  for useless_item in \
-    "drum" "largemouth_bass" "trout" "carp" "flier" \
-    "grubs" "stone"; do
-    friendship::_give "$useless_item" "22445"
-  done
+function friendship::cecil() {
+  craft_max::tree "yarn"
+  friendship::_give "yarn" "22442"
 }
 
 function friendship::star() {
@@ -81,7 +85,7 @@ function friendship::jill() {
 }
 
 function friendship::lorn() {
-  # TODO have vincent stop taking all the stone
+  # TODO have cecil stop taking all the stone
   while craft_max::tree "iron_cup"; do
     friendship::_give "iron_cup" "22446"
   done
@@ -93,12 +97,14 @@ function friendship::lorn() {
 
 function friendship::campaign() {
   log::info "Being friendly {{{"
-  friendship::captain_thomas
-  friendship::roomba
   friendship::buddy
+  friendship::roomba
+  friendship::captain_thomas
   friendship::beatrix
   friendship::vincent
+  friendship::cecil
   friendship::star
+  friendship::jill
   friendship::lorn
   log::info "Being friendly }}}"
 }

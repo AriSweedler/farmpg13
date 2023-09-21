@@ -49,7 +49,7 @@ def decode_chore_to_action(chore, status):
   elif directive == 'Open Items at Locksmith':
     return f'chore::locksmith {remaining}'
   elif directive == 'Sell Items':
-    return f'sell eggs {remaining}'
+    return f'chore::sell {remaining}'
   elif directive == 'Cast Fishing Nets':
     return f'fish::nets {remaining}'
   elif directive == 'Harvest Crops':

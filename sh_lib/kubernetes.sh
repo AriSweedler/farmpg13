@@ -197,7 +197,6 @@ function captain::_delegate::explore_cider() {
   explore --apple_cider --item "$item_obj"
 }
 
-# TODO
 function captain::_delegate::fish() {
   # Figure out where to fish
   local loc
@@ -211,29 +210,6 @@ function captain::_delegate::fish() {
 ################################################################################
 ############################# convenience functions ############################
 ################################################################################
-
-# Currently, this is supposed to be left on
-#
-# TODO change it to wanna run every minute. We will check if stuff needs to be
-# harvested and such
-function captain::crop() {
-  local crops
-  read -ra crops <<< "$(_echo_long_crops | tr '\n' ' ') $(_echo_short_crops | tr '\n' ' ')"
-
-  local crop_obj desired_count
-  for crop_obj in "${crops[@]}"; do
-    # Determine how many we need to have to stop growing this crop
-    desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - $FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-    desired_count_mega=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
-    if item_obj::is_crop::mega "$crop_obj"; then
-      desired_count=$desired_count_mega
-    fi
-
-    # Grow until we have enough
-    captain::ensure_have "$crop_obj" "$desired_count"
-    captain::ensure_have "mushroom" "$desired_count_mega"
-  done
-}
 
 function captain::paste() {
   local paste_items
@@ -271,17 +247,12 @@ function captain::paste() {
   done
 }
 
-function captain::nets() {
-  craft_max::tree "large_net"
-  fish::net::all
-}
-
 # shellcheck disable=SC1102,SC2086
 captain::kuber() {
   local now ts_loop_time sleep_seconds
   now=$(date +'%s')
   ts_loop_time=$now
-  local next_ts_explore=0 next_ts_cook=0 next_ts_workshop=0 next_ts_gm=0 next_ts_friendship=0
+  local next_ts_explore=0 next_ts_cook=0 next_ts_workshop=0 next_ts_gm=0 next_ts_friendship=0 next_ts_crop=0 next_ts_crop_delay
   local MINUTES="* 60" HOURS="* 60 * 60"
   while true; do
     # If now is before our ts_loop_time time then we sleep
@@ -302,12 +273,21 @@ captain::kuber() {
       captain::goodmorning
     fi
 
+    # Run this when it tells us to
+    now=$(date +'%s')
+    if (( now > next_ts_crop )); then
+      next_ts_crop_delay="$(captain::crop)"
+      next_ts_crop=$(( now + next_ts_crop_delay ))
+      log::debug "[KUBER] Crop | next_ts_crop='$next_ts_crop'"
+    fi
+
     # Run this every 20 minutes
     now=$(date +'%s')
     if (( now > next_ts_explore )); then
       next_ts_explore=$(( now + 20 $MINUTES ))
       log::debug "[KUBER] Explore | next_ts_explore='$next_ts_explore'"
       captain::explore::xp # TODO don't just explore XP, but actually decide where to go
+      # TODO have captain::explore tell us when to schedule ourselves next, like ts_crop
     fi
 
     # Run this every 2 minutes
@@ -320,24 +300,18 @@ captain::kuber() {
 
     # Run this every 10 min
     now=$(date +'%s')
-    if (( now > next_ts_workshop )); then
-      next_ts_workshop=$(( now + 10 $MINUTES ))
-      log::debug "[KUBER] Workshop crafting | next_ts_workshop='$next_ts_workshop'"
-      captain::workshop
-    fi
-
-    # Run this every 10 min
-    now=$(date +'%s')
     if (( now > next_ts_friendship )); then
       next_ts_friendship=$(( now + 10 $MINUTES ))
       log::debug "[KUBER] Being friendly | next_ts_friendship='$next_ts_friendship'"
       friendship::campaign
     fi
 
-    # Run this every N minutes
-    # TODO monitor crops
-    # Like... harvest them
-    # Choose what to plant
-    # Etc.
+    # Run this every 10 min
+    now=$(date +'%s')
+    if (( now > next_ts_workshop )); then
+      next_ts_workshop=$(( now + 10 $MINUTES ))
+      log::debug "[KUBER] Workshop crafting | next_ts_workshop='$next_ts_workshop'"
+      captain::workshop
+    fi
   done
 }

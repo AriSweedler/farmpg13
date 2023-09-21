@@ -20,8 +20,13 @@ function farm::set_seed() {
     return 1
   fi
 
+  if ! captain::ensure_have "$seed_obj" "$FARMRPG_PLOTS"; then
+    log::err "Could not ensure we have enough seeds | item_obj='$item_obj' seed_obj='$seed_obj'"
+    return 1
+  fi
+
   # Do work
-  if ! output="$(worker "go=setfarmseedcounts" "id=$seed_nr")"; then
+  if ! output="$(worker "go=setfarmseedcounts" "cachebuster=$RANDOM" "id=$seed_nr")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
@@ -66,7 +71,7 @@ function plant() {
 
   # Parse response
   case "$output" in
-    "|") log::err "Failed to plant | output='$output'" ; return 40;;
+    "|"|"s|0") log::err "Failed to plant | output='$output'" ; return 40;;
     *"|"*) log::debug "Successfully planted | output='$output'" ;;
   esac
 
@@ -199,4 +204,58 @@ function chore::plant() {
   fi
 
   captain::ensure_have "peppers" "$(( i_have_peppers + remaining ))"
+}
+
+function captain::crop() {
+  local farm_status
+  case "$(farmland::status)" in
+    grown) harvest && captain::crop ;;
+    growing)
+      log::info "[KUBER] [Crop] Crops are still growing"
+      local seconds msg
+      seconds="$(farmland::seconds_until_ready)"
+      if (( seconds < 300 )); then msg="soon"; else msg="eventually"; fi
+      log::info "[KUBER] [Crop] Crops will be ready $msg | seconds='$seconds'"
+      echo "$seconds"
+      ;;
+    empty) captain::crop::empty_plots ;;
+    *) log::err "Unknown farm status | farm_status='$farm_status'"; return 1 ;;
+  esac
+}
+
+function captain::crop::empty_plots() {
+  log::info "[KUBER] [Crop] Dealing with empty plots";
+  # Determine how many we need to have to stop growing this crop
+  local desired_count desired_count_mega
+  desired_count=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - $FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
+  desired_count_mega=$(python -c "import math; print(math.ceil($FARMRPG_MAX_INVENTORY - 10*$FARMRPG_FARMING_BOOST*$FARMRPG_PLOTS))")
+
+  # Deal with all grape juices
+  captain::crop::empty_plots::grape_juice
+
+  # Find the next crop to plant
+  read -ra crops <<< "$(_echo_short_crops | tr '\n' ' ')"
+  for crop_obj in "${crops[@]}"; do
+    if item_obj::is_crop::mega "$crop_obj"; then
+      desired_count=$desired_count_mega
+    fi
+    (( $(item_obj::inventory "$crop_obj") < desired_count )) || continue
+    plant "$crop_obj" && return
+  done
+}
+
+function captain::crop::empty_plots::grape_juice() {
+  has_gj_uses_left || return
+  [ -z "$desired_count" ] && log::err "Need to set desired_count before grape juicing" && return 1
+
+  local crops crop_obj grow_time
+  read -ra crops <<< "$(_echo_long_crops | tr '\n' ' ')"
+  for crop_obj in "${crops[@]}"; do
+    (( $(item_obj::inventory "$crop_obj") < desired_count )) || continue
+    grow_time="$(plant "$crop_obj")"
+    drink::grape_juice
+    log::info "You saved time by drinking grape juice! | time_saved='$grow_time'"
+    harvest
+    has_gj_uses_left || return
+  done
 }

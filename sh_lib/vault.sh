@@ -90,6 +90,9 @@ function vault::guess_code() {
 }
 
 function vault::crack() {
+  log::warn "NOT IMPLEMENTED"
+  return
+
   local guess num_guesses=0
   while (( num_guesses++ < FARMRPG_VAULT_GUESSES )); do
     vstatus="$(vault::status)"

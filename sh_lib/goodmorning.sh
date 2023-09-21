@@ -74,9 +74,7 @@ function gm::items() {
   craft_max::tree "lava_sphere"
   craft_max::tree "red_shield"
 
-  sell_max "red_shield"
-  # sell_max "steak_kabob"
-  sell::all_but_one "inferno_sphere"
+  # sell::all_but_one "inferno_sphere" # Save up for buddy quest
   sell::all_but_one "lava_sphere"
   log::info "Items have been good morninged }}}"
 }
@@ -152,9 +150,10 @@ function captain::goodmorning() {
   # Town stuff
   spinwheel "3"
   gm::wishing_well "salt" # spiked_shell
-  #vault::crack
+  vault::crack
 
   # misc
+  exchange::xp
   friendship::campaign
   bank::manager
   mastery::claim::all

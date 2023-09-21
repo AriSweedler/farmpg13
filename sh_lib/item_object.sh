@@ -131,9 +131,9 @@ function has_gj_uses_left() {
   page::panel_crops | grep -q 'Grape Juice'
   rc=$?
   if (( rc == 0 )); then
-    log::debug "Answer is yes"
+    log::debug "[GRAPE_JUICE] [HAVE MORE] Answer is yes"
   else
-    log::debug "Answer is no"
+    log::debug "[GRAPE_JUICE] [HAVE MORE] Answer is no"
   fi
   return $rc
 }
@@ -225,7 +225,7 @@ function item_obj::inventory() {
     return 1
   fi
 
-  if [ "$ans" == "null" ]; then
+  if [ -z "$ans" ] || [ "$ans" == "null" ]; then
     log::debug "There is no key in inventory - answering '0' | key='$item_nr' item_obj='$item_obj'"
     printf "0"
     return 0
@@ -358,6 +358,21 @@ function _is_key_in_json_file() {
   fi
 
   jq --arg key "$key" --exit-status '.[$key]' "$json_file" &> /dev/null
+}
+
+function _echo_generatable_items() {
+  local gen_items=(
+    "wood"
+    "board"
+    "stone"
+    "straw"
+    "coal"
+    "trout"
+    "eggs"
+  )
+  for item in "${gen_items[@]}"; do
+    echo "$item"
+  done
 }
 
 function _echo_short_crops() {

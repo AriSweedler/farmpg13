@@ -200,6 +200,12 @@ function captain::cook() {
       log::err "We do not have the ingrdients to cook anything"
       return 1
     fi
+
+    if [ "$action" == "None" ]; then
+      log::warn "We cannot cook at max capacity because we are out of resources"
+      return
+    fi
+
     IFS=' ' read -ra cmd <<< "$action"
     if ! "${cmd[@]}"; then
       log::err "Failed captain cook action | action='$action'"

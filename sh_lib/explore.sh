@@ -426,6 +426,7 @@ function captain::explore::xp() {
 
 ################################################################################
     # Re-evaluate target
+    continue # TODO we just wanna get gecs for now, we can worry about cooking later
     if ! bone_count="$(item_obj::inventory "bone")"; then
       log::err "Could not read how many bones we have"
       return 1
@@ -434,7 +435,7 @@ function captain::explore::xp() {
       explore_loc="small_cave"
       log::dev "setting target | bone_count='$bone_count' explore_loc='$explore_loc'"
     elif (( bone_count > 1200 )); then
-      explore_loc="whispering_creek"
+      explore_loc="black_rock_canyon"
       log::dev "setting target | bone_count='$bone_count' explore_loc='$explore_loc'"
     else
       log::dev "explore location remains consistent"

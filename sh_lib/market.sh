@@ -27,8 +27,10 @@ function buy() {
 
 function sell() {
   # Parse args
-  # TODO validate that this is an item_obj
-  if ! item_id="$(item_obj::num "$1")"; then
+  local item_name item_obj item_nr
+  item_name="${1:?}"
+  item_obj="$(item::new::name "$item_name")"
+  if ! item_nr="$(item_obj::num "$1")"; then
     log::err "Failed to get item ID"
     return 1
   fi
@@ -36,24 +38,23 @@ function sell() {
 
   # Do work
   local output
-  if ! output="$(worker "go=sellitem" "id=${item_id}" "qty=${quantity}")"; then
+  if ! output="$(worker "go=sellitem" "id=${item_nr}" "qty=${quantity}")"; then
     log::err "Failed to invoke worker"
     return 1
   fi
 
   # Validate output
+  case "$output" in
+    0) log::err "Sold for 0? | output='$output'" ; return 1;;
+    error) log::err "Failed to sell | item='$item_name/$item_nr' quantity='$quantity' output='$output'" ; return 1;;
+  esac
   if (( output > 0 )); then
-    log::info "Sold successfully | item='$1/$item_id' quantity='$quantity' output='$output'"
-  elif [ "$output" == "0" ]; then
-    log::err "Sold for 0 ? | output='$output' output='$output'"
-    return 1
-  elif [ "$output" == "error" ]; then
-    log::err "Failed to sell | item='$1/$item_id' quantity='$quantity' output='$output'"
-    return 1
-  else
-    log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
-    return 1
+    log::info "Sold successfully | item='$item_name/$item_nr' quantity='$quantity' output='$output'"
+    return
   fi
+
+  log::warn "Unknown output to '${FUNCNAME[0]}' | output='$output'"
+  return 1
 }
 
 function sell_max() {
@@ -165,4 +166,24 @@ function _sale_decision() {
     *) echo "unknown" ;;
   esac
   return 1
+}
+
+function chore::sell() {
+  #set -x
+  local remaining="${1:?}"
+  local i_have
+  while (( remaining > 0 )); do
+    read -ra trashy <<< "$(_echo_generatable_items | tr '\n' ' ')"
+    for item_obj in "${trashy[@]}"; do
+      i_have=$(item_obj::inventory "$item_obj") || continue
+      if (( i_have > remaining )); then
+        sell "$item_obj" "$remaining"
+        return
+      fi
+      # sell "$item_obj" "$i_have"
+      remaining=$(( remaining - i_have ))
+    done
+    log::err "We are gunna have to wait for more generatable items"
+    sleep $((60 * 10))
+  done
 }

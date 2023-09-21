@@ -73,6 +73,8 @@ def slaughter_cmds(html):
   soup = BeautifulSoup(html, 'html.parser')
   staged_bacon = get_staged_bacon(soup)
   slaughter_options_div = soup.find('select', class_='levelid')
+  if slaughter_options_div == None:
+    return 'log::warn \"No more piggies to deal with\"'
   slaughter_options_map = dict(slommer(slaughter_options_div))
   return butcher(staged_bacon, slaughter_options_map)
 
@@ -157,7 +159,7 @@ function captain::pigs() {
   for action in $(page::pigs | bs4_helper::pigs::get_slaughter_cmds); do
     IFS=' ' read -ra cmd <<< "$action"
     log::info "[CAPTAIN] [Pigs] [slaughter] Taking action | action='$action'"
-    "${cmd[@]}"
+    IFS=' ' "${cmd[@]}"
   done
   )
 
