@@ -271,6 +271,15 @@ function item_management::explored() {
       item_management::craft "prism_shard" "magicite"
       item_management::sell "magicite"
       ;;
+    ember_lagoon_lorn)
+      #item_management::craft "glass_orb" "glass_bottle"
+      item_management::craft "emberstone" "cooking_pot"
+      item_management::craft "prism_shard" "magicite"
+      item_management::sell "magicite"
+      inventory::update_cache
+      friendship::lorn
+      while craft_max iron_cup; do friendship::lorn; done
+      ;;
     forest)
       item_management::craft "hide" "leather"
       item_management::craft "arrowhead" "crossbow"

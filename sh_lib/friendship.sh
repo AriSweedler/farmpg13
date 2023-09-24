@@ -86,9 +86,8 @@ function friendship::jill() {
 
 function friendship::lorn() {
   # TODO have cecil stop taking all the stone
-  while craft_max::tree "iron_cup"; do
-    friendship::_give "iron_cup" "22446"
-  done
+  craft_max::tree "iron_cup"
+  friendship::_give "iron_cup" "22446"
 }
 
 ################################################################################

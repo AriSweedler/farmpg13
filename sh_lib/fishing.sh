@@ -84,7 +84,8 @@ function fish::net::all() {
   fi
 
   while (( num_nets > 0 )); do
-    fish::net::one "pirate_s_cove" >/dev/null
+    # fish::net::one "pirate_s_cove" >/dev/null
+    fish::net::one "small_island" >/dev/null
     (( --num_nets % 10 == 0 )) && fish::sell
   done
 }
